@@ -27,15 +27,14 @@ class ProductBundleMetaImport extends ImportHelpers {
 
 	function set_product_bundle_meta_values($header_array ,$value_array , $map , $post_id ,$type , $line_number,$mode=null,$hash_key=null){
 		global $wpdb;
-
+		$woocommerceMetaInstance = WooCommerceMetaImport::getInstance();
 		$helpers_instance = ImportHelpers::getInstance();
 		$data_array = [];
 
 		$data_array = $helpers_instance->get_header_values($map , $header_array , $value_array);
-
-		if($type == 'WooCommerce Product'){
-			self::$woocommerce_meta_instance->woocommerce_meta_import_function($data_array, $post_id, $type, $line_number, $header_array, $value_array,$mode,$hash_key); 
-		}
+        if($type == 'WooCommerce Product'){
+            $woocommerceMetaInstance->woocommerce_product_bundle_import_function($data_array, '', $post_id, '' ,$type , $line_number , $mode, $header_array, $value_array , '', $hash_key,'','','');
+        }
 	}
 }
 

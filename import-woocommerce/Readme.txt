@@ -1,33 +1,33 @@
 === Import WooCommerce Suite ===
 Contributors: smackcoders
 Donate link: https://www.paypal.me/smackcoders
-Tags: import, import woocommerce, woocommerce product export, woocommerce product import, product export, product import, woocommerce csv importer, import woocommerce products, csv import export, woocommerce, csv importer, woocommerce xml importer
+Tags: import, import woocommerce, woocommerce product export, woocommerce product import, product export, product import, woocommerce csv importer, import woocommerce products, csv import export, woocommerce, csv importer, woocommerce xml importer, import woocommerce Coupons, import woocommerce orders
 Requires at least: 5.0
 Tested up to: 6.4.1
-Stable tag: 1.9.4
-Version: 1.9.4
+Stable tag: 2.0
+Version: 2.0
 Requires PHP: 5.2.4
 Author: smackcoders
 Plugin URI: https://wordpress.org/plugins/import-woocommerce/
 Author URI: https://www.smackcoders.com/wp-ultimate-csv-importer-pro.html
 License: GPLv2 or later
 
-Complete Import WooCommerce Suite to import Products such as simple, grouped, variable, and external products from CSV or XML files.
+Complete WooCommerce Import Suite designed to import everything from simple and grouped products to orders, coupons, and reviews using CSV or XML.
 
 == Description ==
 
-The WooCommerce Product Import Suite is a powerful plugin that allows you to import products into your WooCommerce store in bulk using file formats like CSV and XML. You can also use the plugin to import product images, videos, and other files.
+The WooCommerce Import Suite is a powerful plugin that allows you to import products, orders, coupons, and reviews into your WooCommerce store in bulk using file formats like CSV and XML. You can also import product images, videos, and other files.
 
 Key features:
 
-* Product Variations Import: Easily Import product variations.
 * Product Reviews Import: Import product reviews from other sources.
 * Product Categories Import: Import product categories in bulk.
-* Product Attributes Import: Import product attributes in bulk.
 * Product Tags Import: Import product tags in bulk.
 * Featured Image Import: Supports importing inline and featured images with product import.
+* Orders Import: Import Orders to keep all sales data organized and up-to-date.
+* Coupons Import: Import Coupons to streamline your marketing efforts.
 
-This WooCommerce Product Import tool is user-friendly and comes with comprehensive documentation. It is also compatible with all major WordPress themes and plugins.
+This WooCommerce Product Import tool is user-friendly and offers a comprehensive documentation. It is also compatible with all major WordPress themes and plugins.
 
 Note: Please ensure that you have installed and activated the [WP Ultimate CSV Importer & Exporter](https://wordpress.org/plugins/wp-ultimate-csv-importer/) plugin before installing this add-on.
 
@@ -36,12 +36,12 @@ Note: Please ensure that you have installed and activated the [WP Ultimate CSV I
 
 * Import WooCommerce products from CSV and XML files.
 * Import product images, videos, and other files.
-* Import product variations.
 * Import product reviews.
 * Import product categories.
-* Import product attributes.
 * Import product tags.
 * Import products with SEO data.
+* Import WooCommerce Orders.
+* Import WooCommerce Coupons.
 * Compatible with all major WordPress themes and plugins.
 * Supports various types of product imports: simple, grouped, variable, and external/affiliate.
 * Supports WooCommerce Product Add-ons Import.
@@ -49,9 +49,7 @@ Note: Please ensure that you have installed and activated the [WP Ultimate CSV I
 * Supports Product Retailers Import.
 * Supports Returns and Warranty Request Import.
 * Supports Pre Order Import.
-* Supports Custom Attributes Import.
 * Supports importing featured images from external URLs.
-* Support for Variation Swatcher for WooCommerce Plugin.
 * Compatibility for custom taxonomies import.
 * Supports Multilingual WooCommerce Products Import.
 
@@ -60,8 +58,8 @@ Note: Please ensure that you have installed and activated the [WP Ultimate CSV I
 * Save time and effort by importing products in bulk into WooCommerce with this Product Import plugin.
 * Import products from any source using this bulk import tool.
 * Import WooCommerce product feed data.
-* Import product variations, and product reviews.
-* Import products with categories, attributes, and tags.
+* Import product reviews.
+* Import products with categories and tags.
 * Import Product Gallery images.
 * Auto-mapping of CSV headers with required fields.
 * Duplicate detection based on content and post titles.
@@ -109,7 +107,6 @@ Step 3: Manage media uploads & Import configurations
 = Supported Third-Party plugins = 
 
 * Product Bundles Plugin.
-* Variation Swatcher for WooCommerce Plugin.
 * Product Add-ons for WooCommerce.
 * Chained Products.
 * Product Retailers.
@@ -163,19 +160,16 @@ To import product images, you need to specify a separate field like 'Product Ima
 4. How can I Import Product categories and Product tags?
 To import product categories and tags, simply specify separate fields for each in your product import file and list the values separated by commas.
 
-5. Can i import Product variations and attributes?
-Absolutely! WP Ultimate CSV Importer allows you to import product variations separately for better organization. Start by importing your products with attributes in one file. Then, in a second file, import the associated variations.
-
-6. How to import product reviews?
+5. How to import product reviews?
 Importing product reviews is crucial to attracting visitors to buy your products. This WooCommerce Product Importer supports reviews import. Get all your reviews associated with products in your import file, upload it to the plugin, choose WooCommerce Reviews as your post type, and follow the import steps.
  
-7. Can I include an external URL for image import? 
+6. Can I include an external URL for image import? 
 Yes, featured images can be imported from an external URL, but inline images can only be added through shortcodes.
 
-8. How to include images within the content? 
+7. How to include images within the content? 
 Inline images in the content can be included using shortcodes. The images in the shortcode need to be uploaded in a zip folder containing images with the exact names mentioned in the shortcode.
 
-9. Why isn't the import button enabled?
+8. Why isn't the import button enabled?
 The import button will only be enabled after uploading the CSV file for import. If it's not enabled, ensure that the file is in UTF-8 format.
 
 
@@ -186,6 +180,14 @@ The import button will only be enabled after uploading the CSV file for import. 
 4. Log section with both Admin and Web views.
 
 == Changelog ==
+
+= 2.0 =
+
+Release date: 2024-09-24
+
+* Added: Support for WooCommerce Orders and Coupons import
+* Improved: WooCommerce Product import via API
+* Resolved: Minor bug fixes
 
 = 1.9.4 =
 * Resolved: Stock import issue
@@ -327,6 +329,9 @@ Resolved: An issue with WooCommerce Stock Status.
 * Initial release version. Tested and found to work well without any issues.
 
 == Upgrade Notice ==
+
+= 2.0 =
+* Upgrade now to unlock the feature of importing WooCommerce Orders and Coupons.
 
 = 1.9.4 =
 * Upgrade now to get new media handling and minor bug fixes .
