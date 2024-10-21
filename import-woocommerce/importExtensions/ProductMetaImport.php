@@ -30,6 +30,7 @@ class ProductMetaImport extends ImportHelpers
 
 	function set_product_meta_values($header_array, $value_array, $map, $post_id, $variation_id, $type, $line_number, $mode, $hash_key, $check_bundle_type = null)
 	{
+	
 		global $wpdb;
 		$woocommerceMetaInstance = WooCommerceMetaImport::getInstance();
 		$helpers_instance = ImportHelpers::getInstance();
@@ -43,6 +44,8 @@ class ProductMetaImport extends ImportHelpers
 			$woocommerceMetaInstance->woocommerce_coupons_meta_import_function($data_array, $image_meta, $post_id, $variation_id, $type, $line_number, $mode, $header_array, $value_array, $hash_key);
 		} else if ($type == 'BUNDLEMETA') {
 			$woocommerceMetaInstance->woocommerce_product_bundle_import_function($data_array, '', $post_id, '', $type, $line_number, $mode, $header_array, $value_array, '', $hash_key, '', '', '');
+		} else if ($type == 'PPOMMETA') {
+				$woocommerceMetaInstance->ppom_meta_import_function($data_array, $post_id );
 		}
 	}
 }
