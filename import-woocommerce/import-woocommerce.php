@@ -11,7 +11,7 @@
  * @wordpress-plugin
  * Plugin Name: Import Woocommerce
  * Description: Import your WordPress Post, Page and Simple WooCommerce Product with Import Woocommerce. 
- * Version: 2.1
+ * Version: 2.2
  * Text Domain: import-woocommerce
  * Domain Path: /languages
  * Author: smackcoders
@@ -53,7 +53,7 @@ class WooComCSVHandler extends ImportHelpers {
 	private static $instance = null;
 	private static $install = null,$plugin_instance=null ;
 
-	public $version = '2.1';
+	public $version = '2.2';
 
 	public function __construct(){ 	
 		add_action('wp_ajax_DeactivateMailwoocommerce',array(__CLASS__,'deactivate_mail_woocommerce'));

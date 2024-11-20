@@ -3,16 +3,16 @@ Contributors: smackcoders
 Donate link: https://www.paypal.me/smackcoders
 Tags: import, import woocommerce, woocommerce product export, woocommerce product import, product export, product import, woocommerce csv importer, import woocommerce products, csv import export, woocommerce, csv importer, woocommerce xml importer, import woocommerce Coupons, import woocommerce orders
 Requires at least: 5.0
-Tested up to: 6.4.1
-Stable tag: 2.1
-Version: 2.1
+Tested up to: 6.7
+Stable tag: 2.2
+Version: 2.2
 Requires PHP: 5.2.4
 Author: smackcoders
 Plugin URI: https://wordpress.org/plugins/import-woocommerce/
 Author URI: https://www.smackcoders.com/wp-ultimate-csv-importer-pro.html
 License: GPLv2 or later
 
-Complete WooCommerce Import Suite designed to import everything from simple and grouped products to orders, coupons, and reviews using CSV or XML.
+Complete WooCommerce Import Suite designed to import everything from simple and grouped products to orders, coupons, and reviews data using CSV or XML.
 
 == Description ==
 
@@ -52,6 +52,7 @@ Note: Please ensure that you have installed and activated the [WP Ultimate CSV I
 * Supports importing featured images from external URLs.
 * Compatibility for custom taxonomies import.
 * Supports Multilingual WooCommerce Products Import.
+* Supports YITH Order Tracking plugin fields data import.
 
 = Benefits =
 
@@ -114,6 +115,7 @@ Step 3: Manage media uploads & Import configurations
 * WooCommerce Pre-Orders.
 * All-in-One SEO.
 * Polylang for WooCommerce.
+* YITH WooCommerce Order & Shipment Tracking.
 
 
 Note: Use the [Export adddon](https://wordpress.org/plugins/wp-ultimate-exporter) to export WooCommerce products from your website. It also supports exporting WooCommerce Orders, and Coupons.
@@ -180,6 +182,12 @@ The import button will only be enabled after uploading the CSV file for import. 
 4. Log section with both Admin and Web views.
 
 == Changelog ==
+= 2.2 =
+
+Release date: 2024-11-20
+
+* New Feature: Added support for YITH WooCommerce Order and Shipment Tracking plugin fields data import export.
+
 = 2.1 =
 
 Release date: 2024-10-21
@@ -334,6 +342,9 @@ Resolved: An issue with WooCommerce Stock Status.
 * Initial release version. Tested and found to work well without any issues.
 
 == Upgrade Notice ==
+
+= 2.2 =
+*Upgrade now to get the new feature YITH WooCommerce Order & Shipment Tracking plugin fields data import/export.
 
 = 2.1 =
 * Added: import support for WooCommerce orders, including personalized product details from PPOM (Personalized Product Option Manager) fields.

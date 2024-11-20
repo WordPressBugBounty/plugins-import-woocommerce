@@ -201,6 +201,14 @@ class WooCommerceCoreImport extends ImportHelpers
 		$order->set_currency($order_currency);
 		// Calculate totals
 		$order->calculate_totals();
+		
+		$order->update_meta_data( 'ywot_tracking_code', $order_meta_data['ywot_tracking_code'] );
+		$order->update_meta_data( 'ywot_tracking_postcode', $order_meta_data['ywot_tracking_postcode']);
+		$order->update_meta_data( 'ywot_carrier_id', $order_meta_data['ywot_carrier_id'] );
+		$order->update_meta_data( 'ywot_pick_up_date', $order_meta_data['ywot_pick_up_date'] );
+		$order->update_meta_data( 'ywot_estimated_delivery_date', $order_meta_data['ywot_estimated_delivery_date'] );
+		$order->update_meta_data( 'ywot_picked_up', $order_meta_data['ywot_picked_up'] );
+
 		$order_id = $order->save();
 		// $order = wc_get_order( $order_id );
 		// $order->set_status( 'wc-completed' );
