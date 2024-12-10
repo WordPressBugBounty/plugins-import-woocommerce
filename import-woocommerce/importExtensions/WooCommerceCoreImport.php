@@ -311,6 +311,10 @@ class WooCommerceCoreImport extends ImportHelpers
 
 	public function woocommerce_product_import($data_array, $mode, $check, $unikey_value, $unikey_name, $hash_key, $line_number, $unmatched_row, $wpml_values = null)
 	{
+		try{
+			if(!empty($product_meta_data)){
+				$post_values = array_merge($post_values,$product_meta_data);
+			}
 		$helpers_instance = ImportHelpers::getInstance();
 		global $wpdb;
 		global $core_instance, $sitepress;
@@ -337,7 +341,7 @@ class WooCommerceCoreImport extends ImportHelpers
 
 		if ($check == 'ID') {
 			if (isset($data_array['ID'])) {
-				$ID = $data_array['ID'];
+				$ID = $post_values['ID'];
 				$getResult =  $wpdb->get_results("SELECT ID FROM {$wpdb->prefix}posts WHERE ID = '$ID' AND post_type = '$post_type' AND post_status != 'trash' order by ID DESC ");
 			}
 		}
@@ -459,6 +463,12 @@ class WooCommerceCoreImport extends ImportHelpers
 				$fields = $wpdb->get_results("UPDATE $logTableName SET created = $created_count WHERE $unikey_name = '$unikey_value'");
 			}
 		}
+	}catch (\Exception $e) {
+		$core_instance->detailed_log[$line_number]['Message'] = $e->getMessage();
+		$core_instance->detailed_log[$line_number]['state'] = 'Skipped';
+		$wpdb->get_results("UPDATE $log_table_name SET skipped = $skipped_count WHERE $unikey_name = '$unikey_value'");
+		return array('MODE' => $mode,'ID' => '');
+	}
 		$returnArr['ID'] = $post_id;
 		$returnArr['MODE'] = $mode_of_affect;
 		if (!empty($data_array['post_author'])) {

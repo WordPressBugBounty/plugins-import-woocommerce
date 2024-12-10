@@ -4,8 +4,8 @@ Donate link: https://www.paypal.me/smackcoders
 Tags: import, import woocommerce, woocommerce product export, woocommerce product import, product export, product import, woocommerce csv importer, import woocommerce products, csv import export, woocommerce, csv importer, woocommerce xml importer, import woocommerce Coupons, import woocommerce orders
 Requires at least: 5.0
 Tested up to: 6.7
-Stable tag: 2.2
-Version: 2.2
+Stable tag: 2.3
+Version: 2.3
 Requires PHP: 5.2.4
 Author: smackcoders
 Plugin URI: https://wordpress.org/plugins/import-woocommerce/
@@ -182,6 +182,13 @@ The import button will only be enabled after uploading the CSV file for import. 
 4. Log section with both Admin and Web views.
 
 == Changelog ==
+
+= 2.3 =
+
+Release date: 2024-12-10
+
+* New Feature: Added support for importing WooCommerce EAN/GTIN fields.
+
 = 2.2 =
 
 Release date: 2024-11-20
@@ -342,6 +349,9 @@ Resolved: An issue with WooCommerce Stock Status.
 * Initial release version. Tested and found to work well without any issues.
 
 == Upgrade Notice ==
+
+= 2.3 =
+*Upgrade now to get the new WooCommerce EAN/GTIN field import feature
 
 = 2.2 =
 *Upgrade now to get the new feature YITH WooCommerce Order & Shipment Tracking plugin fields data import/export.
