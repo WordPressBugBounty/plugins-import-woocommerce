@@ -334,13 +334,23 @@ class WooCommerceCoreImport extends ImportHelpers
 		$getResult = '';
 		$mode_of_affect = 'Inserted';
 
+		$guid = isset($data_array['GUID']) ? trim($data_array['GUID']) : '';
+        if (!empty($guid)) {
+            $existing_guid = $wpdb->get_var("SELECT guid FROM {$wpdb->prefix}posts WHERE guid = '$guid' AND post_type = 'product'");
+            if ($existing_guid && $mode == 'Insert') {
+                // Skip duplicate GUID in insert mode
+                $core_instance->detailed_log[$line_number]['Message'] = "Skipped, Duplicate GUID found.";
+                $wpdb->get_results("UPDATE $logTableName SET skipped = $skipped_count WHERE $unikey_name = '$unikey_value'");
+                return ['MODE' => $mode];
+            }
+        }
 		// Assign post type
 		$data_array['post_type'] = 'product';
 		$data_array = $core_instance->import_core_fields($data_array);
 		$post_type = $data_array['post_type'];
 
 		if ($check == 'ID') {
-			if (isset($data_array['ID'])) {
+			if (isset($post_values['ID'])) {
 				$ID = $post_values['ID'];
 				$getResult =  $wpdb->get_results("SELECT ID FROM {$wpdb->prefix}posts WHERE ID = '$ID' AND post_type = '$post_type' AND post_status != 'trash' order by ID DESC ");
 			}
@@ -463,7 +473,8 @@ class WooCommerceCoreImport extends ImportHelpers
 				$fields = $wpdb->get_results("UPDATE $logTableName SET created = $created_count WHERE $unikey_name = '$unikey_value'");
 			}
 		}
-	}catch (\Exception $e) {
+	}
+	catch (\Exception $e) {
 		$core_instance->detailed_log[$line_number]['Message'] = $e->getMessage();
 		$core_instance->detailed_log[$line_number]['state'] = 'Skipped';
 		$wpdb->get_results("UPDATE $log_table_name SET skipped = $skipped_count WHERE $unikey_name = '$unikey_value'");

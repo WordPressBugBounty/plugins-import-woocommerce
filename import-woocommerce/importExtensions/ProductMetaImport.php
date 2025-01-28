@@ -47,6 +47,9 @@ class ProductMetaImport extends ImportHelpers
 		} else if ($type == 'PPOMMETA') {
 				$woocommerceMetaInstance->ppom_meta_import_function($data_array, $post_id );
 		}
+		elseif ($type == 'EPOMETA') {
+            $woocommerceMetaInstance->epo_meta_import_function($data_array, $post_id);
+        } 
 	}
 }
 global $uci_woocomm_meta;

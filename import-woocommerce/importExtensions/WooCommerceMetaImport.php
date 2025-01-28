@@ -1380,6 +1380,22 @@ class WooCommerceMetaImport extends ImportHelpers
 			update_post_meta($pID, $meta_key, $meta_value);
 		}
 	}
+	public function epo_meta_import_function($pro_meta_fields, $post_id) {
+		$order = wc_get_order($post_id);
+	
+		// Check if order exists
+		if ($order) {
+
+			// Get the order items
+			foreach ($order->get_items() as $item_id => $item) {    
+				// Add EPO meta data to the order items
+				foreach ($pro_meta_fields as $ekey => $eval) {
+					wc_add_order_item_meta($item_id, $ekey, $eval);
+				}
+			}
+		}
+		}
+
 
 	public function ppom_meta_import_function($ppom_fields, $post_id){
 
