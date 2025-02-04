@@ -50,6 +50,10 @@ class ProductMetaImport extends ImportHelpers
 		elseif ($type == 'EPOMETA') {
             $woocommerceMetaInstance->epo_meta_import_function($data_array, $post_id);
         } 
+		else if ($type == 'WCPAMETA') {
+            $woocommerceMetaInstance->wcpa_meta_import_function($data_array, $post_id);
+        }
+
 	}
 }
 global $uci_woocomm_meta;

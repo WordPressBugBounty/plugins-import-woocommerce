@@ -16,13 +16,14 @@ require_once('MediaHandling.php');
 
 class WooCommerceCoreImport extends ImportHelpers
 {
-	private static $woocommerce_core_instance = null, $media_instance;
+	private static $woocommerce_core_instance = null, $media_instance,$woocommerce_meta_instance;
 
 	public static function getInstance()
 	{
 
 		if (WooCommerceCoreImport::$woocommerce_core_instance == null) {
 			WooCommerceCoreImport::$woocommerce_core_instance = new WooCommerceCoreImport;
+			WooCommerceCoreImport::$woocommerce_meta_instance = new WooCommerceMetaImport;
 			WooCommerceCoreImport::$media_instance = new MediaHandling();
 			return WooCommerceCoreImport::$woocommerce_core_instance;
 		}
@@ -309,183 +310,387 @@ class WooCommerceCoreImport extends ImportHelpers
 		return $returnArr;
 	}
 
-	public function woocommerce_product_import($data_array, $mode, $check, $unikey_value, $unikey_name, $hash_key, $line_number, $unmatched_row, $wpml_values = null)
-	{
+	// public function woocommerce_product_import($data_array, $mode, $check, $unikey_value, $unikey_name, $hash_key, $line_number, $unmatched_row, $wpml_values = null)
+	// {
+	// 	try{
+	// 		if(!empty($product_meta_data)){
+	// 			$post_values = array_merge($post_values,$product_meta_data);
+	// 		}
+	// 	$helpers_instance = ImportHelpers::getInstance();
+	// 	global $wpdb;
+	// 	global $core_instance, $sitepress;
+
+	// 	$logTableName = $wpdb->prefix . "import_detail_log";
+
+	// 	$data_array['PRODUCTSKU'] = isset($data_array['PRODUCTSKU']) ? $data_array['PRODUCTSKU'] : '';
+	// 	$data_array['PRODUCTSKU'] = trim($data_array['PRODUCTSKU']);
+	// 	if (isset($data_array['PRODUCTSKU'])) {
+	// 		$core_instance->detailed_log[$line_number]['SKU'] = $data_array['PRODUCTSKU'];
+	// 	}
+	// 	if (isset($core_array['VARIATIONSKU'])) {
+	// 		$core_instance->detailed_log[$line_number]['SKU'] = $data_array['VARIATIONSKU'];
+	// 	}
+	// 	$returnArr = array();
+	// 	$assigned_author = '';
+	// 	$getResult = '';
+	// 	$mode_of_affect = 'Inserted';
+
+	// 	$guid = isset($data_array['GUID']) ? trim($data_array['GUID']) : '';
+    //     if (!empty($guid)) {
+    //         $existing_guid = $wpdb->get_var("SELECT guid FROM {$wpdb->prefix}posts WHERE guid = '$guid' AND post_type = 'product'");
+    //         if ($existing_guid && $mode == 'Insert') {
+    //             // Skip duplicate GUID in insert mode
+    //             $core_instance->detailed_log[$line_number]['Message'] = "Skipped, Duplicate GUID found.";
+    //             $wpdb->get_results("UPDATE $logTableName SET skipped = $skipped_count WHERE $unikey_name = '$unikey_value'");
+    //             return ['MODE' => $mode];
+    //         }
+    //     }
+	// 	// Assign post type
+	// 	$data_array['post_type'] = 'product';
+	// 	$data_array = $core_instance->import_core_fields($data_array);
+	// 	$post_type = $data_array['post_type'];
+
+	// 	if ($check == 'ID') {
+	// 		if (isset($post_values['ID'])) {
+	// 			$ID = $post_values['ID'];
+	// 			$getResult =  $wpdb->get_results("SELECT ID FROM {$wpdb->prefix}posts WHERE ID = '$ID' AND post_type = '$post_type' AND post_status != 'trash' order by ID DESC ");
+	// 		}
+	// 	}
+	// 	if ($check == 'post_title') {
+	// 		if (isset($data_array['post_title'])) {
+	// 			$title = $data_array['post_title'];
+	// 			$getResult =  $wpdb->get_results("SELECT ID FROM {$wpdb->prefix}posts WHERE post_title = '$title' AND post_type = '$post_type' AND post_status != 'trash' order by ID DESC ");
+	// 		}
+	// 	}
+	// 	if ($check == 'post_name') {
+	// 		if (isset($data_array['post_name'])) {
+	// 			$name = $data_array['post_name'];
+
+	// 			if ($sitepress != null && is_plugin_active('wpml-ultimate-importer/wpml-ultimate-importer.php')) {
+	// 				$languageCode = $wpml_values['language_code'];
+	// 				$getResult =  $wpdb->get_results("SELECT DISTINCT p.ID FROM {$wpdb->prefix}posts p join {$wpdb->prefix}icl_translations pm ON p.ID = pm.element_id WHERE p.post_name = '$name' AND p.post_type = '$post_type' AND p.post_status != 'trash' AND pm.language_code = '{$languageCode}'");
+	// 			} else {
+	// 				$getResult =  $wpdb->get_results("SELECT ID FROM {$wpdb->prefix}posts WHERE post_name = '$name' AND post_type = '$post_type' AND post_status != 'trash' order by ID DESC ");
+	// 			}
+	// 		}
+	// 	}
+	// 	if ($check == 'PRODUCTSKU') {
+	// 		if (isset($data_array['PRODUCTSKU'])) {
+	// 			$sku = $data_array['PRODUCTSKU'];
+	// 			if ($sitepress != null && is_plugin_active('wpml-ultimate-importer/wpml-ultimate-importer.php')) {
+	// 				$languageCode = $wpml_values['language_code'];
+	// 				$getResult =  $wpdb->get_results("SELECT DISTINCT p.ID FROM {$wpdb->prefix}posts p join {$wpdb->prefix}postmeta pm ON p.ID = pm.post_id inner join {$wpdb->prefix}icl_translations icl ON pm.post_id = icl.element_id WHERE p.post_type = 'product' AND p.post_status != 'trash' and pm.meta_value = '$sku' and icl.language_code = '{$languageCode}'");
+	// 			} else {
+	// 				$getResult =  $wpdb->get_results("SELECT DISTINCT p.ID FROM {$wpdb->prefix}posts p join {$wpdb->prefix}postmeta pm ON p.ID = pm.post_id WHERE p.post_type = 'product' AND p.post_status != 'trash' and pm.meta_value = '$sku' ");
+	// 			}
+	// 		}
+	// 	}
+
+	// 	$updated_row_counts = $helpers_instance->update_count($unikey_value, $unikey_name);
+	// 	$created_count = $updated_row_counts['created'];
+	// 	$updated_count = $updated_row_counts['updated'];
+	// 	$skipped_count = $updated_row_counts['skipped'];
+
+	// 	if ($mode == 'Insert') {
+
+	// 		if (is_array($getResult) && !empty($getResult)) {
+	// 			#skipped
+	// 			$core_instance->detailed_log[$line_number]['Message'] = "Skipped, Due to duplicate Product found!.";
+	// 			$fields = $wpdb->get_results("UPDATE $logTableName SET skipped = $skipped_count WHERE $unikey_name = '$unikey_value'");
+	// 			return array('MODE' => $mode);
+	// 		} else {
+
+	// 			$post_id = wp_insert_post($data_array);
+	// 			set_post_format($post_id, isset($data_array['post_format']));
+
+	// 			if (!empty($data_array['PRODUCTSKU'])) {
+	// 				update_post_meta($post_id, '_sku', $data_array['PRODUCTSKU']);
+	// 			}
+	// 			if (is_wp_error($post_id) || $post_id == '') {
+	// 				# skipped
+	// 				$core_instance->detailed_log[$line_number]['Message'] = "Can't insert this Product. " . $post_id->get_error_message();
+	// 				$fields = $wpdb->get_results("UPDATE $logTableName SET skipped = $skipped_count WHERE $unikey_name = '$unikey_value'");
+	// 				return array('MODE' => $mode);
+	// 			} else {
+	// 				//WPML support on post types
+	// 				global $sitepress;
+	// 				if ($sitepress != null) {
+	// 					$helpers_instance->UCI_WPML_Supported_Posts($data_array, $post_id);
+	// 				}
+	// 			}
+
+	// 			if ($unmatched_row == 'true') {
+	// 				global $wpdb;
+	// 				$type = isset($type) ? $type : '';
+	// 				$post_entries_table = $wpdb->prefix . "ultimate_post_entries";
+	// 				$file_table_name = $wpdb->prefix . "smackcsv_file_events";
+	// 				$get_id  = $wpdb->get_results("SELECT file_name  FROM $file_table_name WHERE `hash_key` = '$hash_key'");
+	// 				$file_name = $get_id[0]->file_name;
+	// 				$wpdb->get_results("INSERT INTO $post_entries_table (`ID`,`type`, `file_name`,`status`) VALUES ( '{$post_id}','{$type}', '{$file_name}','Inserted')");
+	// 			}
+
+	// 			$core_instance->detailed_log[$line_number]['Message'] = 'Inserted Product ID: ' . $post_id . ', ' . $assigned_author;
+	// 			$fields = $wpdb->get_results("UPDATE $logTableName SET created = $created_count WHERE $unikey_name = '$unikey_value'");
+	// 		}
+	// 	}
+	// 	if ($mode == 'Update') {
+
+	// 		if (is_array($getResult) && !empty($getResult)) {
+	// 			$post_id = $getResult[0]->ID;
+	// 			$data_array['ID'] = $post_id;
+	// 			wp_update_post($data_array);
+	// 			set_post_format($post_id, $data_array['post_format']);
+
+	// 			if ($unmatched_row == 'true') {
+	// 				global $wpdb;
+	// 				$post_entries_table = $wpdb->prefix . "ultimate_post_entries";
+	// 				$file_table_name = $wpdb->prefix . "smackcsv_file_events";
+	// 				$get_id  = $wpdb->get_results("SELECT file_name  FROM $file_table_name WHERE `hash_key` = '$hash_key'");
+	// 				$file_name = $get_id[0]->file_name;
+	// 				$wpdb->get_results("INSERT INTO $post_entries_table (`ID`,`type`, `file_name`,`status`) VALUES ( '{$post_id}','{$type}', '{$file_name}','Updated')");
+	// 			}
+	// 			$core_instance->detailed_log[$line_number]['Message'] = 'Updated Product ID: ' . $post_id . ', ' . $assigned_author;
+	// 			$fields = $wpdb->get_results("UPDATE $logTableName SET updated = $updated_count WHERE $unikey_name = '$unikey_value'");
+	// 		} else {
+	// 			$post_id = wp_insert_post($data_array);
+	// 			set_post_format($post_id, $data_array['post_format']);
+
+	// 			if (is_wp_error($post_id) || $post_id == '') {
+	// 				# skipped
+	// 				$core_instance->detailed_log[$line_number]['Message'] = "Can't insert this Product. " . $post_id->get_error_message();
+	// 				$fields = $wpdb->get_results("UPDATE $logTableName SET skipped = $skipped_count WHERE $unikey_name = '$unikey_value'");
+	// 				return array('MODE' => $mode);
+	// 			}
+
+	// 			if ($unmatched_row == 'true') {
+	// 				global $wpdb;
+	// 				$post_entries_table = $wpdb->prefix . "ultimate_post_entries";
+	// 				$file_table_name = $wpdb->prefix . "smackcsv_file_events";
+	// 				$get_id  = $wpdb->get_results("SELECT file_name  FROM $file_table_name WHERE `hash_key` = '$hash_key'");
+	// 				$file_name = $get_id[0]->file_name;
+	// 				$wpdb->get_results("INSERT INTO $post_entries_table (`ID`,`type`, `file_name`,`status`) VALUES ( '{$post_id}','{$type}', '{$file_name}','Updated')");
+	// 			}
+	// 			$core_instance->detailed_log[$line_number]['Message'] = 'Inserted Product ID: ' . $post_id . ', ' . $assigned_author;
+	// 			$fields = $wpdb->get_results("UPDATE $logTableName SET created = $created_count WHERE $unikey_name = '$unikey_value'");
+	// 		}
+	// 	}
+	// }
+	// catch (\Exception $e) {
+	// 	$core_instance->detailed_log[$line_number]['Message'] = $e->getMessage();
+	// 	$core_instance->detailed_log[$line_number]['state'] = 'Skipped';
+	// 	$wpdb->get_results("UPDATE $log_table_name SET skipped = $skipped_count WHERE $unikey_name = '$unikey_value'");
+	// 	return array('MODE' => $mode,'ID' => '');
+	// }
+	// 	$returnArr['ID'] = $post_id;
+	// 	$returnArr['MODE'] = $mode_of_affect;
+	// 	if (!empty($data_array['post_author'])) {
+	// 		$returnArr['AUTHOR'] = isset($assigned_author) ? $assigned_author : '';
+	// 	}
+	// 	return $returnArr;
+	// }
+	 public function woocommerce_product_import($post_values, $mode, $check, $unikey_value, $unikey_name, $hash_key, $line_number, $unmatched_row,$header_array,$value_array, $wpml_values = null,$product_meta_data=null,$attr_data=null){
 		try{
 			if(!empty($product_meta_data)){
 				$post_values = array_merge($post_values,$product_meta_data);
 			}
-		$helpers_instance = ImportHelpers::getInstance();
-		global $wpdb;
-		global $core_instance, $sitepress;
-
-		$logTableName = $wpdb->prefix . "import_detail_log";
-
-		$data_array['PRODUCTSKU'] = isset($data_array['PRODUCTSKU']) ? $data_array['PRODUCTSKU'] : '';
-		$data_array['PRODUCTSKU'] = trim($data_array['PRODUCTSKU']);
-		if (isset($data_array['PRODUCTSKU'])) {
-			$core_instance->detailed_log[$line_number]['SKU'] = $data_array['PRODUCTSKU'];
-		}
-		if (isset($core_array['VARIATIONSKU'])) {
-			$core_instance->detailed_log[$line_number]['SKU'] = $data_array['VARIATIONSKU'];
-		}
-		$returnArr = array();
-		$assigned_author = '';
-		$getResult = '';
-		$mode_of_affect = 'Inserted';
-
-		$guid = isset($data_array['GUID']) ? trim($data_array['GUID']) : '';
-        if (!empty($guid)) {
-            $existing_guid = $wpdb->get_var("SELECT guid FROM {$wpdb->prefix}posts WHERE guid = '$guid' AND post_type = 'product'");
-            if ($existing_guid && $mode == 'Insert') {
-                // Skip duplicate GUID in insert mode
-                $core_instance->detailed_log[$line_number]['Message'] = "Skipped, Duplicate GUID found.";
-                $wpdb->get_results("UPDATE $logTableName SET skipped = $skipped_count WHERE $unikey_name = '$unikey_value'");
-                return ['MODE' => $mode];
-            }
-        }
-		// Assign post type
-		$data_array['post_type'] = 'product';
-		$data_array = $core_instance->import_core_fields($data_array);
-		$post_type = $data_array['post_type'];
-
-		if ($check == 'ID') {
-			if (isset($post_values['ID'])) {
-				$ID = $post_values['ID'];
-				$getResult =  $wpdb->get_results("SELECT ID FROM {$wpdb->prefix}posts WHERE ID = '$ID' AND post_type = '$post_type' AND post_status != 'trash' order by ID DESC ");
+			global $wpdb;
+			global $wpdb,$core_instance,$sitepress; 
+			$wpml_values = null;
+			$helpers_instance = ImportHelpers::getInstance();
+			$media_instance = MediaHandling::getInstance();
+			$woocommerce_meta_instance = WooCommerceMetaImport::getInstance();
+	
+			$log_table_name = $wpdb->prefix ."import_detail_log";
+			$returnArr = array();
+			$assigned_author = '';
+			$mode_of_affect = 'Inserted';
+			$updated_row_counts = $helpers_instance->update_count($unikey_value,$unikey_name);
+			$created_count = $updated_row_counts['created'];
+			$updated_count = $updated_row_counts['updated'];
+			$skipped_count = $updated_row_counts['skipped'];
+			$product_type = !empty($post_values['product_type']) ? $post_values['product_type'] : 1;
+			if (is_plugin_active('jet-booking/jet-booking.php')){
+				$booking_type = trim(jet_abaf()->settings->get( 'apartment_post_type' ));
 			}
-		}
-		if ($check == 'post_title') {
-			if (isset($data_array['post_title'])) {
-				$title = $data_array['post_title'];
-				$getResult =  $wpdb->get_results("SELECT ID FROM {$wpdb->prefix}posts WHERE post_title = '$title' AND post_type = '$post_type' AND post_status != 'trash' order by ID DESC ");
-			}
-		}
-		if ($check == 'post_name') {
-			if (isset($data_array['post_name'])) {
-				$name = $data_array['post_name'];
-
-				if ($sitepress != null && is_plugin_active('wpml-ultimate-importer/wpml-ultimate-importer.php')) {
-					$languageCode = $wpml_values['language_code'];
-					$getResult =  $wpdb->get_results("SELECT DISTINCT p.ID FROM {$wpdb->prefix}posts p join {$wpdb->prefix}icl_translations pm ON p.ID = pm.element_id WHERE p.post_name = '$name' AND p.post_type = '$post_type' AND p.post_status != 'trash' AND pm.language_code = '{$languageCode}'");
-				} else {
-					$getResult =  $wpdb->get_results("SELECT ID FROM {$wpdb->prefix}posts WHERE post_name = '$name' AND post_type = '$post_type' AND post_status != 'trash' order by ID DESC ");
+			if (class_exists('WC_Product')) {
+				if($product_type == 'variation' || $product_type== 8){
+					$post_type = 'product_variation';
 				}
-			}
-		}
-		if ($check == 'PRODUCTSKU') {
-			if (isset($data_array['PRODUCTSKU'])) {
-				$sku = $data_array['PRODUCTSKU'];
-				if ($sitepress != null && is_plugin_active('wpml-ultimate-importer/wpml-ultimate-importer.php')) {
-					$languageCode = $wpml_values['language_code'];
-					$getResult =  $wpdb->get_results("SELECT DISTINCT p.ID FROM {$wpdb->prefix}posts p join {$wpdb->prefix}postmeta pm ON p.ID = pm.post_id inner join {$wpdb->prefix}icl_translations icl ON pm.post_id = icl.element_id WHERE p.post_type = 'product' AND p.post_status != 'trash' and pm.meta_value = '$sku' and icl.language_code = '{$languageCode}'");
-				} else {
-					$getResult =  $wpdb->get_results("SELECT DISTINCT p.ID FROM {$wpdb->prefix}posts p join {$wpdb->prefix}postmeta pm ON p.ID = pm.post_id WHERE p.post_type = 'product' AND p.post_status != 'trash' and pm.meta_value = '$sku' ");
+				else{
+					$post_type = 'product';
 				}
-			}
-		}
-
-		$updated_row_counts = $helpers_instance->update_count($unikey_value, $unikey_name);
-		$created_count = $updated_row_counts['created'];
-		$updated_count = $updated_row_counts['updated'];
-		$skipped_count = $updated_row_counts['skipped'];
-
-		if ($mode == 'Insert') {
-
-			if (is_array($getResult) && !empty($getResult)) {
-				#skipped
-				$core_instance->detailed_log[$line_number]['Message'] = "Skipped, Due to duplicate Product found!.";
-				$fields = $wpdb->get_results("UPDATE $logTableName SET skipped = $skipped_count WHERE $unikey_name = '$unikey_value'");
-				return array('MODE' => $mode);
-			} else {
-
-				$post_id = wp_insert_post($data_array);
-				set_post_format($post_id, isset($data_array['post_format']));
-
-				if (!empty($data_array['PRODUCTSKU'])) {
-					update_post_meta($post_id, '_sku', $data_array['PRODUCTSKU']);
-				}
-				if (is_wp_error($post_id) || $post_id == '') {
-					# skipped
-					$core_instance->detailed_log[$line_number]['Message'] = "Can't insert this Product. " . $post_id->get_error_message();
-					$fields = $wpdb->get_results("UPDATE $logTableName SET skipped = $skipped_count WHERE $unikey_name = '$unikey_value'");
-					return array('MODE' => $mode);
-				} else {
-					//WPML support on post types
-					global $sitepress;
-					if ($sitepress != null) {
-						$helpers_instance->UCI_WPML_Supported_Posts($data_array, $post_id);
+				$sku = $post_values['PRODUCTSKU'];
+				if($check == 'ID'){	
+					$ID = $post_values['ID'];	
+					if($sitepress != null && isset($wpml_values['language_code']) && !empty($wpml_values['language_code'])) {
+						$language_code = $wpml_values['language_code'];
+						$get_result =  $wpdb->get_results("SELECT DISTINCT p.ID FROM {$wpdb->prefix}posts p join {$wpdb->prefix}icl_translations pm ON p.ID = pm.element_id WHERE p.ID = $title AND p.post_type = '$post_type' AND p.post_status != 'trash' AND pm.language_code = '{$language_code}'");
+					}
+					elseif(isset($poly_values) && !empty($poly_values)){
+						$language_code = $poly_values['language_code'];
+						if(!empty($ID)){
+							$get_result=$wpdb->get_results("SELECT DISTINCT p.ID FROM {$wpdb->prefix}posts as p inner join {$wpdb->prefix}term_relationships as tr ON tr.object_id=p.ID inner join {$wpdb->prefix}term_taxonomy as tax on tax.term_taxonomy_id=tr.term_taxonomy_id inner join {$wpdb->prefix}terms as t on t.term_id=tax.term_id  where tax.taxonomy ='language'  and t.slug='$language_code' and p.ID=$ID AND p.post_status != 'trash'");
+						}
+					}
+					else{
+						$get_result =  $wpdb->get_results("SELECT ID FROM {$wpdb->prefix}posts WHERE ID = '$ID' AND post_type = '$post_type' AND post_status != 'trash' order by ID DESC ");			
 					}
 				}
-
-				if ($unmatched_row == 'true') {
-					global $wpdb;
-					$type = isset($type) ? $type : '';
-					$post_entries_table = $wpdb->prefix . "ultimate_post_entries";
-					$file_table_name = $wpdb->prefix . "smackcsv_file_events";
-					$get_id  = $wpdb->get_results("SELECT file_name  FROM $file_table_name WHERE `hash_key` = '$hash_key'");
-					$file_name = $get_id[0]->file_name;
-					$wpdb->get_results("INSERT INTO $post_entries_table (`ID`,`type`, `file_name`,`status`) VALUES ( '{$post_id}','{$type}', '{$file_name}','Inserted')");
+				if($check == 'post_title'){
+					$title = $post_values['post_title'];
+					if($sitepress != null && isset($wpml_values['language_code']) && !empty($wpml_values['language_code'])) {
+						$language_code = $wpml_values['language_code'];
+						$get_result =  $wpdb->get_results("SELECT DISTINCT p.ID FROM {$wpdb->prefix}posts p join {$wpdb->prefix}icl_translations pm ON p.ID = pm.element_id WHERE p.post_title = '$title' AND p.post_type = '$post_type' AND p.post_status != 'trash' AND pm.language_code = '{$language_code}'");
+					}
+					elseif(isset($poly_values) && !empty($poly_values)){
+						$language_code = $poly_values['language_code'];
+						$get_result=$wpdb->get_results("SELECT DISTINCT p.ID FROM {$wpdb->prefix}posts as p inner join {$wpdb->prefix}term_relationships as tr ON tr.object_id=p.ID inner join {$wpdb->prefix}term_taxonomy as tax on tax.term_taxonomy_id=tr.term_taxonomy_id inner join {$wpdb->prefix}terms as t on t.term_id=tax.term_id  where tax.taxonomy ='language'  and t.slug='$language_code' and p.post_title='$title' AND p.post_status != 'trash'");
+					}
+					else{
+						$get_result =  $wpdb->get_results("SELECT ID FROM {$wpdb->prefix}posts WHERE post_title = \"$title\" AND post_type = \"$post_type\" AND post_status != \"trash\" order by ID DESC ");		
+					}
+					
 				}
-
-				$core_instance->detailed_log[$line_number]['Message'] = 'Inserted Product ID: ' . $post_id . ', ' . $assigned_author;
-				$fields = $wpdb->get_results("UPDATE $logTableName SET created = $created_count WHERE $unikey_name = '$unikey_value'");
+				if($check == 'post_name'){
+					$name = $post_values['post_name'];
+					if($sitepress != null && isset($wpml_values['language_code']) && !empty($wpml_values['language_code'])) {
+						$language_code = $wpml_values['language_code'];
+						$get_result =  $wpdb->get_results("SELECT DISTINCT p.ID FROM {$wpdb->prefix}posts p join {$wpdb->prefix}icl_translations pm ON p.ID = pm.element_id WHERE p.post_name = '$name' AND p.post_type = '$post_type' AND p.post_status != 'trash' AND pm.language_code = '{$language_code}'");
+					}
+					elseif(isset($poly_values) && !empty($poly_values)){
+						$language_code = $poly_values['language_code'];
+						$get_result=$wpdb->get_results("SELECT DISTINCT p.ID FROM {$wpdb->prefix}posts as p inner join {$wpdb->prefix}term_relationships as tr ON tr.object_id=p.ID inner join {$wpdb->prefix}term_taxonomy as tax on tax.term_taxonomy_id=tr.term_taxonomy_id inner join {$wpdb->prefix}terms as t on t.term_id=tax.term_id  where tax.taxonomy ='language'  and t.slug='$language_code' and p.post_name='$name'");
+					}
+					else{
+					$get_result =  $wpdb->get_results("SELECT ID FROM {$wpdb->prefix}posts WHERE post_name = '$name' AND post_type = '$post_type' AND post_status != 'trash' order by ID DESC ");	
+					}
+				}
+				if($check == 'PRODUCTSKU'){
+					$sku = $post_values['PRODUCTSKU'];
+					if($sitepress != null && isset($wpml_values['language_code']) && !empty($wpml_values['language_code'])) {
+						$language_code = $wpml_values['language_code'];
+						$get_result =  $wpdb->get_results("SELECT DISTINCT p.ID FROM {$wpdb->prefix}posts p join {$wpdb->prefix}postmeta pm ON p.ID = pm.post_id inner join {$wpdb->prefix}icl_translations icl ON pm.post_id = icl.element_id WHERE p.post_type = '$post_type' AND p.post_status != 'trash' and pm.meta_value = '$sku' and icl.language_code = '{$language_code}'");               
+					}
+					elseif(isset($poly_values) && !empty($poly_values)){
+						$language_code = $poly_values['language_code'];
+						$get_result=$wpdb->get_results("SELECT DISTINCT p.ID FROM {$wpdb->prefix}posts as p inner join {$wpdb->prefix}postmeta pm ON p.ID=pm.post_id inner join {$wpdb->prefix}term_relationships as tr ON tr.object_id=p.ID inner join {$wpdb->prefix}term_taxonomy as tax on tax.term_taxonomy_id=tr.term_taxonomy_id inner join {$wpdb->prefix}terms as t on t.term_id=tax.term_id  where tax.taxonomy ='language'  and t.slug='$language_code' and p.post_name='$name' and pm.meta_value = '$sku'");
+					}
+					else{
+						$get_result =  $wpdb->get_results("SELECT DISTINCT p.ID FROM {$wpdb->prefix}posts p join {$wpdb->prefix}postmeta pm ON p.ID = pm.post_id WHERE p.post_type = '$post_type' AND p.post_status != 'trash' and pm.meta_value = '$sku' ");
+					}
+				}
+				$update = array('ID','post_title','post_name','PRODUCTSKU');
+				if($mode == 'Insert'){
+					if (isset($get_result) && is_array($get_result) && !empty($get_result)) {
+						#skipped
+						$core_instance->detailed_log[$line_number]['Message'] = "Skipped, Due to duplicate Product found!.";
+						$core_instance->detailed_log[$line_number]['state'] = 'Skipped';
+						$wpdb->get_results("UPDATE $log_table_name SET skipped = $skipped_count WHERE $unikey_name = '$unikey_value'");
+						return array('MODE' => $mode);
+					}
+					else{
+						$post_values['produc_type'] = isset($post_values['product_type'])?$post_values['product_type']:'simple';
+						if (isset($post_values['produc_type'])) {
+							$product_type =$post_values['product_type'];
+							if ($post_values['product_type'] == 1) {
+								$product_type = 'simple';
+							}
+							if ($post_values['product_type'] == 2) {
+								$product_type = 'grouped';
+							}
+							if ($post_values['product_type'] == 3) {
+								$product_type = 'external';
+							}
+							if ($post_values['product_type'] == 4) {
+								$product_type = 'variable';
+							}
+							if ($post_values['product_type'] == 5) {
+								$product_type = 'subscription';
+							}
+							if ($post_values['product_type'] == 6) {
+								$product_type = 'variable-subscription';
+							}
+							if ($post_values['product_type'] == 7) {
+								$product_type = 'bundle';
+							}	
+							if($post_values['product_type'] == 8){
+								$product_type = 'variation';
+							}
+							if($post_values['product_type'] == 9){
+								$product_type = 'jet_booking';
+							}
+							if($product_type == 'external'){
+								$product = new \WC_Product_External();
+							}
+							elseif($product_type == 'variable'){
+								$product = new \WC_Product_Variable();
+							}
+							elseif($product_type == 'grouped'){
+								$product = new	\WC_Product_Grouped();
+							}
+							elseif($product_type == 'variation'){
+								$product = new \WC_Product_Variation();							
+							}
+							elseif($product_type == 'jet_booking'){
+								$product = new \WC_Product_Jet_Booking();							
+							}
+							else{
+								$product = new  \WC_Product_Simple();
+							}
+							
+							$title = $post_values['post_title'];
+							$post_status = $post_values['post_status'] ?? 'publish';
+		
+							$product->set_name($title); 							
+							// Set the SKU for the current product if it doesn't already exist.
+							$prod_sku = $post_values['PRODUCTSKU'] ?? null;
+							$sku_check = isset($prod_sku) ?  wc_get_product_id_by_sku( wc_clean($prod_sku) ) : 1;
+							if (($sku_check == 0)  && empty($poly_values)) {
+								$product->set_sku(wc_clean($prod_sku));
+							}
+							else{
+								if(!empty($poly_values)){
+									$product->save();
+									$product_id = $product->get_id();
+									update_post_meta($product_id, '_sku', $prod_sku);
+								}
+							}
+							$product_id = $product->save();
+							$core_instance->detailed_log[$line_number]['Type_of_Product'] = $product_type;
+							wp_set_object_terms($product_id, $product_type, 'product_type');
+						}
+						if($unmatched_row == 'true'){
+							global $wpdb;
+							$post_entries_table = $wpdb->prefix ."post_entries_table";
+							$file_table_name = $wpdb->prefix."smackcsv_file_events";
+							$get_id  = $wpdb->get_results( "SELECT file_name  FROM $file_table_name WHERE `$unikey_name` = '$unikey_value'");	
+							$file_name = $get_id[0]->file_name;
+							$wpdb->get_results("INSERT INTO $post_entries_table (`ID`,`type`, `file_name`,`status`) VALUES ( '{$product_id}','{$type}', '{$file_name}','Inserted')");
+						}
+		
+						$core_instance->detailed_log[$line_number]['Message'] = 'Inserted Product ID: ' . $product_id . ', ' . $assigned_author;
+						$core_instance->detailed_log[$line_number]['state'] = 'Inserted';
+						$wpdb->get_results("UPDATE $log_table_name SET created = $created_count WHERE $unikey_name = '$unikey_value'");
+					}
+					
+				}
+			if(!empty($product)){
+				$woocommerce_meta_instance->woocommerce_meta_import_function($product_meta_data, '', $product_id, '', 'WooCommerce Product', $line_number, $header_array, $value_array, $mode, $hash_key,$attr_data);
 			}
 		}
-		if ($mode == 'Update') {
-
-			if (is_array($getResult) && !empty($getResult)) {
-				$post_id = $getResult[0]->ID;
-				$data_array['ID'] = $post_id;
-				wp_update_post($data_array);
-				set_post_format($post_id, $data_array['post_format']);
-
-				if ($unmatched_row == 'true') {
-					global $wpdb;
-					$post_entries_table = $wpdb->prefix . "ultimate_post_entries";
-					$file_table_name = $wpdb->prefix . "smackcsv_file_events";
-					$get_id  = $wpdb->get_results("SELECT file_name  FROM $file_table_name WHERE `hash_key` = '$hash_key'");
-					$file_name = $get_id[0]->file_name;
-					$wpdb->get_results("INSERT INTO $post_entries_table (`ID`,`type`, `file_name`,`status`) VALUES ( '{$post_id}','{$type}', '{$file_name}','Updated')");
-				}
-				$core_instance->detailed_log[$line_number]['Message'] = 'Updated Product ID: ' . $post_id . ', ' . $assigned_author;
-				$fields = $wpdb->get_results("UPDATE $logTableName SET updated = $updated_count WHERE $unikey_name = '$unikey_value'");
-			} else {
-				$post_id = wp_insert_post($data_array);
-				set_post_format($post_id, $data_array['post_format']);
-
-				if (is_wp_error($post_id) || $post_id == '') {
-					# skipped
-					$core_instance->detailed_log[$line_number]['Message'] = "Can't insert this Product. " . $post_id->get_error_message();
-					$fields = $wpdb->get_results("UPDATE $logTableName SET skipped = $skipped_count WHERE $unikey_name = '$unikey_value'");
-					return array('MODE' => $mode);
-				}
-
-				if ($unmatched_row == 'true') {
-					global $wpdb;
-					$post_entries_table = $wpdb->prefix . "ultimate_post_entries";
-					$file_table_name = $wpdb->prefix . "smackcsv_file_events";
-					$get_id  = $wpdb->get_results("SELECT file_name  FROM $file_table_name WHERE `hash_key` = '$hash_key'");
-					$file_name = $get_id[0]->file_name;
-					$wpdb->get_results("INSERT INTO $post_entries_table (`ID`,`type`, `file_name`,`status`) VALUES ( '{$post_id}','{$type}', '{$file_name}','Updated')");
-				}
-				$core_instance->detailed_log[$line_number]['Message'] = 'Inserted Product ID: ' . $post_id . ', ' . $assigned_author;
-				$fields = $wpdb->get_results("UPDATE $logTableName SET created = $created_count WHERE $unikey_name = '$unikey_value'");
-			}
-		}
-	}
-	catch (\Exception $e) {
+	}catch (\Exception $e) {
 		$core_instance->detailed_log[$line_number]['Message'] = $e->getMessage();
 		$core_instance->detailed_log[$line_number]['state'] = 'Skipped';
 		$wpdb->get_results("UPDATE $log_table_name SET skipped = $skipped_count WHERE $unikey_name = '$unikey_value'");
 		return array('MODE' => $mode,'ID' => '');
 	}
-		$returnArr['ID'] = $post_id;
-		$returnArr['MODE'] = $mode_of_affect;
-		if (!empty($data_array['post_author'])) {
-			$returnArr['AUTHOR'] = isset($assigned_author) ? $assigned_author : '';
-		}
-		return $returnArr;
+			$returnArr['ID'] = $product_id;
+			$returnArr['MODE'] = $mode_of_affect;
+			$returnArr['post_type'] = $post_type;
+			if (!empty($post_values['post_author'])) {
+				$returnArr['AUTHOR'] = isset($assigned_author) ? $assigned_author : '';
+			}
+			return $returnArr;
 	}
 	public function woocommerce_variations_import($data_array, $mode, $check, $unikey, $unikey_name, $line_number, $variation_count)
 	{
