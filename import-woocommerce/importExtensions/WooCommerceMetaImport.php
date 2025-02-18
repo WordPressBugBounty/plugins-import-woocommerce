@@ -1428,6 +1428,13 @@ class WooCommerceMetaImport extends ImportHelpers
 						$product->set_catalog_visibility($visibility);
 					}
 					break;
+				case 'post_content':
+					if(isset($data_array[$ekey]) && !empty($data_array[$ekey]) && $data_array[$ekey] !==null){
+						$content = html_entity_decode($data_array[$ekey]);
+						$product->set_description( wp_kses_post( $content ) );
+					}
+					
+					break;
 
 				case 'downloadable':
 					if (isset($data_array[$ekey]) && method_exists($product, 'set_downloadable')) {
@@ -1712,22 +1719,31 @@ class WooCommerceMetaImport extends ImportHelpers
 					$core_instance->detailed_log[$line_number]['Categories'] = $data_array[$ekey];
 					break;
 				case 'downloadable_files':
-					$downloadable_files = array(); // Initialize as an array
-					if (!empty($data_array[$ekey]) && method_exists($product, 'set_downloadable') && method_exists($product, 'set_downloads')) {
-						$product->set_downloadable(true);
-						$downloadable_files_raw = explode('|', $data_array[$ekey]);
-						$downloadable_files = [];
-
-						foreach ($downloadable_files_raw as $file_entry) {
-							$file_info = explode(',', $file_entry);
-							$file_url = $file_info[1] ?? '';
-							$file_name = $file_info[0] ?? '';
-							$downloadable_files[] = [
-								'name' => sanitize_text_field($file_name),
-								'file' => esc_url($file_url),
-							];
+					$downloadable_files = '';
+					if ($data_array[$ekey]) {
+						$exp_key = array();
+						$downloads = array();
+						$product->set_downloadable( true );
+						$exploded_file_data = explode('|', $data_array[$ekey]);
+						foreach($exploded_file_data as $file_datas){
+							$exploded_separate = explode(',', $file_datas);
+							$download = new \WC_Product_Download();
+							$attachment_id= WooCommerceMetaImport::$media_instance->media_handling($exploded_separate[1], $pID,$data_array,'','','',$header_array,$value_array);
+							$file_url = wp_get_attachment_url( $attachment_id ); 
+							$download->set_name( $exploded_separate[0]);
+							if(!empty($file_url) && isset($file_url)){
+								$download->set_id( md5( $file_url ) );
+								$download->set_file( $file_url );
+								$downloads[] = $download;
+							}else{
+								$download->set_id( md5( $exploded_separate[1], ) );
+								$download->set_file($exploded_separate[1], );
+								$downloads[] = $download;
+							}
 						}
-						$product->set_downloads($downloadable_files);
+					}
+					if(!empty($downloads)){
+						$product->set_downloads( $downloads );
 					}
 					break;
 				case 'grouping_product':
@@ -1961,6 +1977,34 @@ class WooCommerceMetaImport extends ImportHelpers
 				case 'preorders_when_to_charge':
 					$metaData['_wc_pre_orders_when_to_charge'] = $data_array[$ekey];
 					break;
+				case '_global_unique_id':
+					if(!empty($data_array[$ekey])){
+						if (is_numeric($data_array[$ekey])) {
+							$validated_value = number_format((float)$data_array[$ekey], 0, '.', '');
+							// Check if the global unique ID is already assigned to another product
+							$args = [
+								'post_type'      => 'product',
+								'post_status'    => ['publish', 'draft', 'pending', 'private'], // Exclude 'trash'
+								'meta_query'     => [
+									[
+										'key'     => '_global_unique_id', // Replace with the actual meta key for global_unique_id
+										'value'   => $validated_value,
+										'compare' => '='
+									]
+								],
+								'fields'         => 'ids',
+								'posts_per_page' => 1,
+							];
+							$existing_products = get_posts($args);
+							if(empty($existing_products)){
+								$product->set_global_unique_id($validated_value);
+								if(is_plugin_active('ean-for-woocommerce/ean-for-woocommerce.php')){
+									update_post_meta($product_id, '_alg_ean', $validated_value);
+								}
+							}
+						}
+					}
+					break;
 				default:
 					if (empty($variation_id)) {
 						$metaData[$ekey] = $data_array[$ekey];
@@ -2130,7 +2174,7 @@ class WooCommerceMetaImport extends ImportHelpers
 								}
 							}
 
-							$attribute->set_options($value);
+							$attribute->set_options($term_ids);
 							break;
 						case "product_attribute_visible$i":
 							if($attr_val == '1'){

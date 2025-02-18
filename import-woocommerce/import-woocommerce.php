@@ -11,7 +11,7 @@
  * @wordpress-plugin
  * Plugin Name: Import Woocommerce
  * Description: Import your WordPress Post, Page and Simple WooCommerce Product with Import Woocommerce. 
- * Version: 2.5
+ * Version: 2.6
  * Text Domain: import-woocommerce
  * Domain Path: /languages
  * Author: smackcoders
