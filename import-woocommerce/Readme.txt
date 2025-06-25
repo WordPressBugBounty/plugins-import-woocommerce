@@ -1,22 +1,22 @@
 === Import WooCommerce Suite ===
-Contributors: smackcoders
+Contributors: smackcoders, riswanasmack, premairuthayarajan
 Donate link: https://www.paypal.me/smackcoders
 Tags: import, woocommerce csv import, woocommerce xml import, export woocommerce products, product export, product import, woocommerce product import, woocommerce product export, woocommerce csv importer, import woocommerce products, csv import export, woocommerce, csv importer, woocommerce xml importer, import woocommerce Coupons, import woocommerce customers, import woocommerce orders
 Requires at least: 5.0
 Tested up to: 6.7
-Stable tag: 2.6
-Version: 2.6
+Stable tag: 2.6.1
+Version: 2.6.1
 Requires PHP: 7.4
 Author: smackcoders
 Plugin URI: https://wordpress.org/plugins/import-woocommerce/
 Author URI: https://www.smackcoders.com/wp-ultimate-csv-importer-pro.html
 License: GPLv2 or later
 
-WooCommerce Import Suite Addon: Import Products, Orders, Coupons, Customers, and Reviews with Ease
+Use the WooCommerce Import Suite to import Products, Orders, Coupons, Customers, and Reviews with ease. Requires the WP Ultimate CSV Importer Free plugin.
 
 == Description == 
 
-The WooCommerce Import Suite is a powerful plugin that simplifies importing products, orders, coupons, customers, and reviews into your WooCommerce store. Use CSV or XML files to bulk import data, including product images, videos, and other essential files. 
+The WooCommerce Import Suite makes it easy to import products, orders, coupons, customers, and reviews into your WooCommerce store using CSV or XML files. You can bulk import data, including product images, videos, and other essential files, all in just a few clicks.
 
 Key features:
 
@@ -195,6 +195,13 @@ To [import WooCommerce customers](https://www.smackcoders.com/documentation/wp-u
 
 
 == Changelog ==
+
+= 2.6.1 =
+
+Release date: 2025-06-25
+
+* Fixed: Bugs affecting Product descriptions import.
+
 
 = 2.6 =
 
@@ -382,5 +389,5 @@ Resolved: An issue with WooCommerce Stock Status.
 
 == Upgrade Notice ==
 
-= 2.6 =
-New Update Available! We’ve added import and export support for WooCommerce Customers to enhance your experience!
+= 2.6.1 =
+New Update Available! We’ve fixed bugs affecting the product descriptions import. Upgrade now for a better import experience!

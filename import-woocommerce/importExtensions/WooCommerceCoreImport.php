@@ -641,7 +641,18 @@ class WooCommerceCoreImport extends ImportHelpers
 							$title = $post_values['post_title'];
 							$post_status = $post_values['post_status'] ?? 'publish';
 		
-							$product->set_name($title); 							
+							$product->set_name($title);
+							
+if (!empty($post_values['post_excerpt']) && method_exists($product, 'set_short_description')) {
+    $product->set_short_description($post_values['post_excerpt']);
+}
+
+if (isset($post_values['post_content']) && !empty($post_values['post_content']) && $post_values['post_content'] !== null) {
+    $content = html_entity_decode($post_values['post_content']);
+    $content = str_replace('\n', "\n", $content);
+    $product->set_description($content);
+}
+
 							// Set the SKU for the current product if it doesn't already exist.
 							$prod_sku = $post_values['PRODUCTSKU'] ?? null;
 							$sku_check = isset($prod_sku) ?  wc_get_product_id_by_sku( wc_clean($prod_sku) ) : 1;
