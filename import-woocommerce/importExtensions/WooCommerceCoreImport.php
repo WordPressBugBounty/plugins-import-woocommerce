@@ -643,6 +643,11 @@ class WooCommerceCoreImport extends ImportHelpers
 		
 							$product->set_name($title);
 							
+							if (!empty($post_values['post_name'])) {
+    $custom_slug = sanitize_title($post_values['post_name']);
+    $product->set_slug($custom_slug);
+}
+							
 if (!empty($post_values['post_excerpt']) && method_exists($product, 'set_short_description')) {
     $product->set_short_description($post_values['post_excerpt']);
 }
