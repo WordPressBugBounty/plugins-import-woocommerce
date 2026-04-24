@@ -3,9 +3,9 @@ Contributors: smackcoders, riswanasmack, premairuthayarajan
 Donate link: https://www.paypal.me/smackcoders
 Tags: import, woocommerce csv import, woocommerce xml import, export woocommerce products, product export, product import, woocommerce product import, woocommerce product export, woocommerce csv importer, import woocommerce products, csv import export, woocommerce, csv importer, woocommerce xml importer, import woocommerce Coupons, import woocommerce customers, import woocommerce orders
 Requires at least: 5.0
-Tested up to: 6.9
-Stable tag: 2.8
-Version: 2.8
+Tested up to: 7.0
+Stable tag: 2.9
+Version: 2.9
 Requires PHP: 7.4
 Author: smackcoders
 Plugin URI: https://wordpress.org/plugins/import-woocommerce/
@@ -195,6 +195,9 @@ To [import WooCommerce customers](https://www.smackcoders.com/documentation/wp-u
 
 
 == Changelog ==
+
+= 2.9 =
+* Added: WordPress 7.0 compatibility
 
 = 2.8 =
 * Added: WordPress 6.9 compatibility
@@ -398,6 +401,6 @@ Resolved: An issue with WooCommerce Stock Status.
 
 == Upgrade Notice ==
 
-= 2.8 =
+= 2.9 =
 
-Upgrade now to version 2.8! Fully compatible with the latest WordPress version.
+Upgrade now to version 2.9! Fully compatible with the latest WordPress version.
