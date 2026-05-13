@@ -188,6 +188,16 @@ class MediaHandling{
 	public function image_function($f_img , $post_id , $data_array = null,$option_name = null, $use_existing_image = false,$header_array = null , $value_array = null){
 	
 		global $wpdb;
+
+		// Image processing can exceed low PHP time limits on large images.
+		if (function_exists('set_time_limit')) {
+			@set_time_limit(300);
+		}
+		@ini_set('max_execution_time', '300');
+		if (function_exists('wp_raise_memory_limit')) {
+			@wp_raise_memory_limit('image');
+		}
+
 		$f_img = urldecode($f_img);
 		// $image = explode("?", $f_img);
 		// $f_img=$image[0];
@@ -266,24 +276,22 @@ class MediaHandling{
 			$uploaddir_path = $uploaddir_paths . "/" . $fimg_name;
 		}
 	
-			if($file_type['ext'] == 'jpeg'){
-				$response = wp_safe_remote_get($f_img, array( 'timeout' => 30));		
-			}else{
-				$response = wp_safe_remote_get($f_img, array( 'timeout' => 10));		
-			}	
-			if(is_wp_error($response))	{
+			// Remote images can be large/slow; keep connect timeout small to avoid "infinite" hangs,
+			// but allow enough total time for download on slower hosts.
+			$timeout = 60;
+
+			// Stream download to disk to avoid huge in-memory buffers (prevents stalls on large images).
+			$tmp_file = function_exists('download_url') ? download_url($f_img, $timeout) : null;
+			if (is_wp_error($tmp_file) || empty($tmp_file) || !file_exists($tmp_file)) {
 				return null;
 			}
-			$rawdata =  wp_remote_retrieve_body($response);
-		
-		$http_code = wp_remote_retrieve_response_code($response);
-		if($http_code == 404){
-			return null;
-		}
 
-		if ( $http_code != 200 && strpos( $rawdata, 'Not Found' ) != 0 ) {
-			return null;
-		}
+			$rawdata = @file_get_contents($tmp_file);
+			@unlink($tmp_file);
+
+			if ($rawdata === false || $rawdata === '') {
+				return null;
+			}
 		if(is_plugin_active('exmage-wp-image-links/exmage-wp-image-links.php')){
 			$guid =$fimg_name;
 		}

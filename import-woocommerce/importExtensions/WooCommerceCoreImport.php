@@ -508,6 +508,7 @@ class WooCommerceCoreImport extends ImportHelpers
 			$created_count = $updated_row_counts['created'];
 			$updated_count = $updated_row_counts['updated'];
 			$skipped_count = $updated_row_counts['skipped'];
+			// Avoid PHP notices when mapping doesn't provide product_type.
 			$product_type = !empty($post_values['product_type']) ? $post_values['product_type'] : 1;
 			if (is_plugin_active('jet-booking/jet-booking.php')){
 				$booking_type = trim(jet_abaf()->settings->get( 'apartment_post_type' ));
@@ -589,34 +590,35 @@ class WooCommerceCoreImport extends ImportHelpers
 						return array('MODE' => $mode);
 					}
 					else{
-						$post_values['produc_type'] = isset($post_values['product_type'])?$post_values['product_type']:'simple';
+						$post_values['produc_type'] = isset($post_values['product_type']) ? $post_values['product_type'] : 'simple';
 						if (isset($post_values['produc_type'])) {
-							$product_type =$post_values['product_type'];
-							if ($post_values['product_type'] == 1) {
+							$pt = (int) ($post_values['product_type'] ?? 1);
+							$product_type = $pt;
+							if ($pt === 1) {
 								$product_type = 'simple';
 							}
-							if ($post_values['product_type'] == 2) {
+							if ($pt === 2) {
 								$product_type = 'grouped';
 							}
-							if ($post_values['product_type'] == 3) {
+							if ($pt === 3) {
 								$product_type = 'external';
 							}
-							if ($post_values['product_type'] == 4) {
+							if ($pt === 4) {
 								$product_type = 'variable';
 							}
-							if ($post_values['product_type'] == 5) {
+							if ($pt === 5) {
 								$product_type = 'subscription';
 							}
-							if ($post_values['product_type'] == 6) {
+							if ($pt === 6) {
 								$product_type = 'variable-subscription';
 							}
-							if ($post_values['product_type'] == 7) {
+							if ($pt === 7) {
 								$product_type = 'bundle';
 							}	
-							if($post_values['product_type'] == 8){
+							if ($pt === 8) {
 								$product_type = 'variation';
 							}
-							if($post_values['product_type'] == 9){
+							if ($pt === 9) {
 								$product_type = 'jet_booking';
 							}
 							if($product_type == 'external'){
