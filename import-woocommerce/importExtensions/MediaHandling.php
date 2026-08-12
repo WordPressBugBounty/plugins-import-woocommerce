@@ -80,18 +80,47 @@ class MediaHandling{
 				return $attach_id;
 			}
 			else{
-				$attachment_id = $wpdb->get_results("SELECT ID FROM {$wpdb->prefix}posts WHERE post_type = 'attachment' AND guid LIKE '%$image_title%'", ARRAY_A);
+				$attachment_id = $wpdb->get_results(
+					$wpdb->prepare(
+						"SELECT ID FROM {$wpdb->prefix}posts WHERE post_type = 'attachment' AND guid LIKE %s",
+						'%' . $wpdb->esc_like( $image_title ) . '%'
+					),
+					ARRAY_A
+				);
 
 			}
 			if(is_array($attachment_id) && !empty($attachment_id[0]['ID']) && $image_type != 'Featured'){
 					$table_name = $wpdb->prefix . 'smackcsv_file_events';
-					$post_title = $wpdb->get_var("SELECT post_title FROM {$wpdb->prefix}posts WHERE ID = '{$post_id}' AND post_status != 'trash'");
-					$file_name = $wpdb->get_var("SELECT file_name FROM $table_name WHERE hash_key = '$hash_key'");
+					$post_title = $wpdb->get_var(
+						$wpdb->prepare(
+							"SELECT post_title FROM {$wpdb->prefix}posts WHERE ID = %d AND post_status != 'trash'",
+							absint( $post_id )
+						)
+					);
+					$file_name = $wpdb->get_var(
+						$wpdb->prepare(
+							"SELECT file_name FROM $table_name WHERE hash_key = %s",
+							$hash_key
+						)
+					);
 					$shortcode_table = $wpdb->prefix . "ultimate_csv_importer_shortcode_manager";                                                                   
 					$attach_id = $attachment_id[0]['ID'];
-					$check_id = $wpdb->get_results("SELECT ID FROM {$wpdb->prefix}posts WHERE ID ='{$attach_id}' AND post_title ='image-failed' AND post_type = 'attachment' AND guid LIKE '%$image_title%'", ARRAY_A);
+					$check_id = $wpdb->get_results(
+						$wpdb->prepare(
+							"SELECT ID FROM {$wpdb->prefix}posts WHERE ID = %d AND post_title ='image-failed' AND post_type = 'attachment' AND guid LIKE %s",
+							absint( $attach_id ),
+							'%' . $wpdb->esc_like( $image_title ) . '%'
+						),
+						ARRAY_A
+					);
 					if(!empty($check_id)){
-						$failed_ids = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}ultimate_csv_importer_shortcode_manager WHERE post_id='{$post_id}' AND media_id = '{$attach_id}'");
+						$failed_ids = $wpdb->get_results(
+							$wpdb->prepare(
+								"SELECT * FROM {$wpdb->prefix}ultimate_csv_importer_shortcode_manager WHERE post_id = %d AND media_id = %d",
+								absint( $post_id ),
+								absint( $attach_id )
+							)
+						);
 						if(!empty($failed_ids) && $failed_ids[0]->post_id != $post_id){
 							$attach_id = $check_id[0]['ID'];;
 							$insert_status = $wpdb->insert($shortcode_table,
@@ -237,8 +266,12 @@ class MediaHandling{
 				$fimg_name = str_replace(' ', '-', trim($fimg_name));
 				$fimg_name = preg_replace('/[^a-zA-Z0-9._\-\s]/', '', $fimg_name);
 			}
-			$attachment_id = $wpdb->get_var("SELECT ID FROM ".$wpdb->prefix."posts WHERE post_type = 'attachment' AND guid LIKE '%$fimg_name'");
-
+			$attachment_id = $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT ID FROM ".$wpdb->prefix."posts WHERE post_type = 'attachment' AND guid LIKE %s",
+					'%' . $wpdb->esc_like( $fimg_name )
+				)
+			);
 			if($attachment_id){
 				if(!empty($data_array['featured_image'])){
 					set_post_thumbnail( $post_id, $attachment_id );
@@ -403,9 +436,25 @@ class MediaHandling{
 	public function image_meta_table_entry($line_number ,$post_values, $post_id ,$acf_wpname_element, $acf_csv_name, $hash_key, $plugin,$get_import_type,$templatekey = null,$gmode = null,$header_array = null, $value_array = null,$imgformat = null,$typecct = null,$indexs=null){
 		global $wpdb;
 		$table_name = $wpdb->prefix . 'smackcsv_file_events';
-		$file_name = $wpdb->get_var("SELECT file_name FROM $table_name WHERE hash_key = '$hash_key'");
-		$post_title = $wpdb->get_var("SELECT post_title FROM {$wpdb->prefix}posts WHERE ID = '{$post_id}' AND post_status != 'trash'");
-		$failed_ids = $wpdb->get_results("SELECT post_title,post_id,image_shortcode,media_id,original_image FROM {$wpdb->prefix}ultimate_csv_importer_shortcode_manager WHERE image_shortcode ='Featured_image_' AND post_id = '{$post_id}' AND original_image = '{$acf_csv_name}' ");
+		$file_name = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT file_name FROM $table_name WHERE hash_key = %s",
+				$hash_key
+			)
+		);
+		$post_title = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT post_title FROM {$wpdb->prefix}posts WHERE ID = %d AND post_status != 'trash'",
+				absint( $post_id )
+			)
+		);
+		$failed_ids = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT post_title,post_id,image_shortcode,media_id,original_image FROM {$wpdb->prefix}ultimate_csv_importer_shortcode_manager WHERE image_shortcode ='Featured_image_' AND post_id = %d AND original_image = %s",
+				absint( $post_id ),
+				$acf_csv_name
+			)
+		);
 		//$core_instance = CoreFieldsImport::getInstance();
 		$core_instance = new WooCommerceCoreImport;
 		$shortcode_table = $wpdb->prefix . "ultimate_csv_importer_shortcode_manager";
@@ -427,7 +476,14 @@ class MediaHandling{
 				}       
 					$acf_image_meta = isset($acf_image_meta) ? $acf_image_meta : null;
 					$attach_id = $this->media_handling($acf_csv_name, $post_id, $post_values,$get_import_type,$plugin,$hash_key,'',$header_array,$value_array,$indexs,$acf_wpname_element,$acf_image_meta);
-					$failed_id = $wpdb->get_results("SELECT post_title,post_id,image_shortcode,media_id,original_image FROM {$wpdb->prefix}ultimate_csv_importer_shortcode_manager WHERE post_id = '{$post_id}' AND original_image = '{$acf_csv_name}' AND image_shortcode = '" . esc_sql($plugin.'_image__'.$acf_wpname_element) . "' ");  
+					$failed_id = $wpdb->get_results(
+						$wpdb->prepare(
+							"SELECT post_title,post_id,image_shortcode,media_id,original_image FROM {$wpdb->prefix}ultimate_csv_importer_shortcode_manager WHERE post_id = %d AND original_image = %s AND image_shortcode = %s",
+							absint( $post_id ),
+							$acf_csv_name,
+							$plugin . '_image__' . $acf_wpname_element
+						)
+					);
 					if(!empty($attach_id)){
 						$this->store_image_ids($attach_id ); //store the image id
 						return $attach_id;
@@ -489,12 +545,25 @@ class MediaHandling{
 							}
 							else{
 								$media_id = $failed_id[0]->media_id;
-								$attachment_id = $wpdb->get_results("SELECT ID FROM {$wpdb->prefix}posts WHERE ID = $media_id AND post_title ='image-failed' AND post_type = 'attachment' AND guid LIKE '%$fimg_name%'", ARRAY_A);
+								$attachment_id = $wpdb->get_results(
+									$wpdb->prepare(
+										"SELECT ID FROM {$wpdb->prefix}posts WHERE ID = %d AND post_title ='image-failed' AND post_type = 'attachment' AND guid LIKE %s",
+										absint( $media_id ),
+										'%' . $wpdb->esc_like( $fimg_name ) . '%'
+									),
+									ARRAY_A
+								);
 								$attach_id= $attachment_id[0]['ID'];
 							}		
 						return isset($attach_id) ? $attach_id : '';	
 				}else{
-					$attachment_id = $wpdb->get_results("SELECT ID FROM {$wpdb->prefix}posts WHERE post_title ='image-failed' AND post_type = 'attachment' AND guid LIKE '%$fimg_name%'", ARRAY_A);
+					$attachment_id = $wpdb->get_results(
+						$wpdb->prepare(
+							"SELECT ID FROM {$wpdb->prefix}posts WHERE post_title ='image-failed' AND post_type = 'attachment' AND guid LIKE %s",
+							'%' . $wpdb->esc_like( $fimg_name ) . '%'
+						),
+						ARRAY_A
+					);
 				}
 			return $attach_id;
 		}

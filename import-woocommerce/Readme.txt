@@ -1,106 +1,68 @@
-=== Import WooCommerce Suite ===
-Contributors: smackcoders, riswanasmack, premairuthayarajan
+=== Import WooCommerce Suite for Products, Orders, Coupons, Reviews, and Customers | WP Ultimate CSV Importer ===
+Contributors: smackcoders, premairuthayarajan
 Donate link: https://www.paypal.me/smackcoders
-Tags: import, woocommerce csv import, woocommerce xml import, export woocommerce products, product export, product import, woocommerce product import, woocommerce product export, woocommerce csv importer, import woocommerce products, csv import export, woocommerce, csv importer, woocommerce xml importer, import woocommerce Coupons, import woocommerce customers, import woocommerce orders
+Tags: woocommerce csv import, woocommerce product import, import woocommerce products, woocommerce xml import, import woocommerce orders, import woocommerce customers, bulk import woocommerce, woocommerce order import, woocommerce customer import, product import, import products, woocommerce, csv importer, woocommerce csv importer, import woocommerce coupons, import woocommerce reviews, import woocommerce suite
 Requires at least: 5.0
 Tested up to: 7.0
-Stable tag: 2.9.1
-Version: 2.9.1
+Stable tag: 3.0
+Version: 3.0
 Requires PHP: 7.4
 Author: smackcoders
 Plugin URI: https://wordpress.org/plugins/import-woocommerce/
 Author URI: https://www.smackcoders.com/wp-ultimate-csv-importer-pro.html
 License: GPLv2 or later
 
-Use the WooCommerce Import Suite to import Products, Orders, Coupons, Customers, and Reviews with ease. Requires the WP Ultimate CSV Importer Free plugin.
+Import WooCommerce products, orders, coupons, customers, and reviews from CSV, XML, or Excel files. An add-on for WP Ultimate CSV Importer.
 
-== Description == 
+== Description ==
 
-The WooCommerce Import Suite makes it easy to import products, orders, coupons, customers, and reviews into your WooCommerce store using CSV or XML files. You can bulk import data, including product images, videos, and other essential files, all in just a few clicks.
+Managing a WooCommerce store means constantly moving data — products from suppliers, orders from other platforms, customer databases, coupon campaigns. Doing it manually is slow, error-prone, and simply does not scale. The **Import WooCommerce Suite** solves this by giving you a reliable, flexible bulk import tool for every major WooCommerce data type.
 
-Key features:
+Import **products, orders, coupons, customers, and reviews** from CSV, XML, or Excel files in just a few steps. The add-on handles product images (including gallery images and external URLs), product variations in a single CSV file, SEO data, EAN/GTIN fields, multilingual products, and a wide range of third-party plugin fields — all with an intuitive drag-and-drop interface and real-time import logs.
 
-* **Product Review Import:** Import product reviews from various sources.
-* **Product Category Import:** Bulk import product categories.
-* **Product Tag Import:** Bulk import product tags.
-* **Featured Image Import:** Import inline and featured images during product import.
-* **Order Import:** Import orders to maintain organized and up-to-date sales data.
-* **Coupon Import:** Import coupons to streamline marketing campaigns.
-* **Customer Import:** Easily Import your entire customer database into WooCommerce with ease.
+**This add-on is part of the WP Ultimate CSV Importer ecosystem.** Install the free [WP Ultimate CSV Importer & Exporter](https://wordpress.org/plugins/wp-ultimate-csv-importer/) plugin first to use this add-on. If you also need to **export** WooCommerce products, orders, customers, or other data, install the [WP Ultimate Exporter](https://wordpress.org/plugins/wp-ultimate-exporter) add-on.
 
-This user-friendly WooCommerce import tool includes comprehensive documentation and is compatible with most WordPress themes and plugins.
+= Key Features =
 
-**Note:** Install and activate the [WP Ultimate CSV Importer & Exporter](https://wordpress.org/plugins/wp-ultimate-csv-importer/) plugin before installing this add-on.
+**WooCommerce Product Import**
 
-= Features =
-* Import WooCommerce products from CSV and XML files.
-* Import product images, videos, and other files.
-* Import product reviews.
-* Import product categories.
-* Import product tags.
-* Import products with SEO data.
-* Import WooCommerce orders.
-* Import WooCommerce coupons.
-* Import WooCommerce customers with meta.
-* Compatible with most WordPress themes and plugins.
-* Supports various product types: simple, grouped, variable, and external/affiliate.
-* Supports WooCommerce Product Add-ons import.
-* Supports chained product import.
-* Supports product retailer import.
-* Supports returns and warranty request import.
-* Supports pre-order import.
-* Supports importing featured images from external URLs.
-* Compatible with custom taxonomy imports.
-* Supports multilingual WooCommerce product import.
-* Supports YITH Order Tracking plugin field data import.
+* Import all WooCommerce product types: simple, grouped, variable, and external/affiliate
+* Import product variations from a single CSV file
+* Import product images, gallery images, and featured images
+* Import images from external URLs or Dropbox links
+* Import inline images within product descriptions using shortcodes
+* Import product categories, tags, and custom taxonomies
+* Import product SEO data (compatible with All-in-One SEO)
+* Import EAN/GTIN fields
+* Import multilingual products (compatible with Polylang for WooCommerce)
+* Import product reviews and ratings
+* Auto-map CSV headers to WooCommerce fields
 
-= Benefits =
+**WooCommerce Order Import**
 
-* Save time and effort by bulk importing products.
-* Import products from any source.
-* Import WooCommerce product feed data.
-* Import product reviews.
-* Import products with categories and tags.
-* Import product gallery images.
-* Auto-map CSV headers to the required fields.
-* Detect duplicates based on content and post titles.
-* Real-time import log (web and admin view).
-* User-friendly interface.
-* Comprehensive documentation.
+* Bulk import WooCommerce orders from CSV or XML files
+* Import order details including personalized product fields from PPOM (Personalized Product Option Manager)
+* Import order fields from Extra Product Options for WooCommerce
+* Import YITH WooCommerce Order and Shipment Tracking fields
 
-= Use Cases =
+**WooCommerce Coupon Import**
 
-* Importing products from a spreadsheet.
-* Importing products from a supplier.
-* Importing products from another online store.
-* Importing products from a marketplace.
-* Importing products from a social media platform.
+* Bulk import coupons to streamline marketing campaigns
+* Import all coupon types and discount rules
 
-= Import WooCommerce Products =
+**WooCommerce Customer Import**
 
-Import product data from CSV files. Field names in the CSV file that match WordPress fields are automatically mapped for import accuracy.
+* Import your entire customer database with billing and shipping addresses
+* Import customer meta fields
 
-Watch our WooCommerce CSV Import Tutorial on YouTube: [YouTube](https://www.youtube.com/watch?v=b3Ix0WB3Bwg&feature=youtu.be&utm_source=wordpress_org&utm_medium=readme&utm_campaign=import_woocommerce)
+**Import Configuration & Reliability**
 
-= How to Import WooCommerce Products =
-
-**Step 1: Upload the CSV File**
-
-* Upload the CSV file containing the product feed data.
-* Set the "Post Type" field to "WooCommerce Product."
-* Click "Continue."
-
-**Step 2: Map Fields**
-
-* Map the required WordPress fields to the corresponding CSV headers.
-
-**Step 3: Manage Media and Import Configurations**
-
-* Choose a media upload option.
-* Prevent duplicates by skipping records with similar content, titles, or both.
-* Specify the number of server requests.
-* Click "Import Now."
-* View the import log (web and admin view).
+* Drag-and-drop file upload interface
+* Real-time import log (web and admin view)
+* Duplicate detection based on content and post title
+* Configurable server request settings for large imports
+* Comprehensive import log manager: download summary logs, media logs, and failed media logs as CSV
+* Compatible with most WordPress themes and plugins
 
 = Supported Third-Party Plugins =
 
@@ -110,28 +72,81 @@ Watch our WooCommerce CSV Import Tutorial on YouTube: [YouTube](https://www.yout
 * Product Retailers
 * Returns and Warranty Requests
 * WooCommerce Pre-Orders
+* Extra Product Options for WooCommerce
+* PPOM (Personalized Product Option Manager)
 * All-in-One SEO
 * Polylang for WooCommerce
 * YITH WooCommerce Order & Shipment Tracking
 
-**Note:** Use the [Export Add-on](https://wordpress.org/plugins/wp-ultimate-exporter) to export WooCommerce products, orders, and coupons.
+= The WP Ultimate CSV Importer Ecosystem =
 
-= Upgrade to Ultimate CSV Importer PRO =
+This add-on works as part of a complete data management suite for WordPress and WooCommerce:
 
-The PRO version imports, updates, schedules, and exports products. It also supports chained products, pre-orders, retailers, product returns, warranties, and many third-party plugins.
+* **[WP Ultimate CSV Importer & Exporter](https://wordpress.org/plugins/wp-ultimate-csv-importer/)** (Free, required) — The core plugin for importing posts, pages, custom post types, and more from CSV, XML, and Excel files.
+* **Import WooCommerce Suite** (This plugin) — Extends the core plugin to support all WooCommerce data types: products, orders, coupons, customers, and reviews.
+* **[Import Users Add-on](https://wordpress.org/plugins/import-users-from-csv-with-meta/)** — Import WordPress users and user meta from CSV files.
+* **[WP Ultimate Exporter](https://wordpress.org/plugins/wp-ultimate-exporter)** — Export WooCommerce products, orders, customers, and other WordPress data to CSV or XML files.
+
+Install just what your workflow needs, or use all four together for a complete import/export solution.
+
+= Use Cases =
+
+* **Migrate from another platform** — Moving from Shopify, Magento, or BigCommerce? Import your entire product catalog, customer database, and order history into WooCommerce.
+* **Sync a supplier catalog** — Receive a product feed CSV from your supplier and bulk import products with prices, stock levels, and images in minutes.
+* **Bulk update product data** — Update prices, stock, descriptions, or SEO fields across hundreds or thousands of products by re-importing a CSV.
+* **Migrate from another WooCommerce store** — Transfer products, orders, coupons, and customers between WooCommerce installations cleanly.
+* **Import from a marketplace** — Bring product listings from Amazon, eBay, or other marketplaces into your WooCommerce store.
+* **Launch a coupon campaign** — Bulk import hundreds of unique coupon codes for a promotion or affiliate campaign.
+* **Restore order history** — Import historical orders to maintain complete sales records after a store migration.
+* **Onboard a customer database** — Import existing customers with billing and shipping details to avoid manual re-entry.
+
+= How to Import WooCommerce Products =
+
+Watch our WooCommerce CSV Import Tutorial on YouTube: [YouTube](https://www.youtube.com/watch?v=b3Ix0WB3Bwg&feature=youtu.be&utm_source=wordpress_org&utm_medium=readme&utm_campaign=import_woocommerce)
+
+**Step 1: Upload the CSV File**
+
+* Upload the CSV, XML, or Excel file containing your product data.
+* Set the "Post Type" to "WooCommerce Product."
+* Click "Continue."
+
+**Step 2: Map Fields**
+
+* Map the required WooCommerce fields to the corresponding columns in your file.
+* Matching column headers are auto-mapped to save time.
+
+**Step 3: Configure and Import**
+
+* Choose a media upload option for product images.
+* Set duplicate handling: skip records with similar content, titles, or both.
+* Specify the number of server requests for large imports.
+* Click "Import Now."
+* Monitor progress in the real-time import log (web and admin view).
+
+= Upgrade to WP Ultimate CSV Importer PRO =
+
+The PRO version gives you significantly more control and automation:
+
+* **Scheduled imports exports** — Automatically import and export from a URL, FTP, or Google Sheets
+* **Export** — Export WooCommerce products, orders, coupons, and customers with advanced filters
+* **Update existing products** — Update prices, stock, and descriptions without creating duplicates
+* **Advanced third-party plugin support** — Extended support for chained products, pre-orders, product retailers, returns, and warranties
+* **Custom Fields Support** - Import Products and Orders data with Custom fields created with plugins like JetEngine, Meta Box, Pods, ACF, Toolset, etc., 
+* **Advanced AI Import** - Connect with AI providers, map automatically with AI, generate product descriptions with ai, and import files with adding a single prompt to WooCommerce Products
+* **Priority support** - Dedicated email and call support
 
 [Buy Now](https://www.smackcoders.com/wp-ultimate-csv-importer-pro.html?utm_source=wordpress_org&utm_medium=readme&utm_campaign=import_woocommerce)
 
 = Helpful Links =
-
-* [Demo](https://demo.smackcoders.com/wp-ultimate-csv-importer/wp-admin?utm_source=wordpress_org&utm_medium=readme&utm_campaign=import_woocommerce)
+* [PRO Trial](https://trial.smackcoders.com/?utm_source=wordpress_org&utm_medium=readme&utm_campaign=import_woocommerce)
+* [Try Free Plugin with our Demo](https://demo.smackcoders.com/wp-ultimate-csv-importer/wp-admin?utm_source=wordpress_org&utm_medium=readme&utm_campaign=import_woocommerce)
 * [Support](https://www.smackcoders.com/support.html?utm_source=wordpress_org&utm_medium=readme&utm_campaign=import_woocommerce) or [Email Us](mailto:support@smackcoders.com)
 * [Blog](https://www.smackcoders.com/blog.html?utm_source=wordpress_org&utm_medium=readme&utm_campaign=import_woocommerce)
 * [YouTube Tutorial](https://www.youtube.com/watch?v=b3Ix0WB3Bwg&feature=youtu.be&utm_source=wordpress_org&utm_medium=readme&utm_campaign=import_woocommerce)
 
 == Installation ==
 
-1. Start by installing the [CSV Importer & Exporter plugin.](https://wordpress.org/plugins/wp-ultimate-csv-importer/)
+1. Install and activate the [WP Ultimate CSV Importer & Exporter plugin](https://wordpress.org/plugins/wp-ultimate-csv-importer/) first.
 2. Extract the import-woocommerce.zip file to the 'wordpress/wp-content/plugins' directory either using FTP or using the plugin installation feature in wp-admin.
 3. Activate the plugin in the WordPress plugin list.
 
@@ -143,58 +158,61 @@ The PRO version imports, updates, schedules, and exports products. It also suppo
 
 == Frequently Asked Questions ==
 
-**1. How do I import WooCommerce products?**
+**1. How do I import WooCommerce products from CSV?**
 
-Importing your products is a straightforward process:
+Importing WooCommerce products takes three steps:
 
-* **Go to the Importer:** In your WordPress dashboard, navigate to the "Ultimate CSV Importer" section.
-* **Upload Your File:** Upload your CSV or XML file containing your product data.
-* **Select Product Post Type:** Choose "WooCommerce Products" as the post type you're importing.  This tells the importer what kind of data it's handling.
-* **Map Your Fields:**  This is the most important step!  The importer will show you the columns in your CSV/XML file and the corresponding fields in WooCommerce (like product name, price, description, etc.).  Carefully match (or "map") your column headers to the correct WooCommerce fields. This ensures your data goes where it belongs.
-* **Start the Import:** Click the "Import" button. The plugin will begin importing your products.
-* **Check Your Results:**  Once the import finishes, check both the front end of your website (how customers see it) and the back end (your WordPress admin area) to make sure your products are imported correctly.
+* **Upload your file** — In your WordPress dashboard, go to the Ultimate CSV Importer section and upload your CSV, XML, or Excel file.
+* **Select post type** — Choose "WooCommerce Products" as the post type.
+* **Map fields and import** — Match your column headers to the corresponding WooCommerce fields (matching headers are auto-mapped). Click "Import Now" and monitor the real-time log.
 
-**2. Is there a file size limit?**
+Once done, verify the results on both the frontend and your WooCommerce admin panel.
 
-Yes, there are limits. The maximum file size you can upload depends on your server's configuration.  The key setting is `upload_max_filesize`, and it should be at least 2MB (or larger, depending on how many products you're importing). You can usually find this setting in your web hosting control panel or by contacting your hosting provider. Some plugins may have additional limits or ways around this.
+**2. How do I import WooCommerce product variations from a single CSV?**
 
-**3. How do I import product images?**
+Yes, you can import all product variations — including attributes, SKUs, prices, and stock — from a single CSV file. Prepare your CSV with one row per variation, include the parent product SKU or ID, and select "WooCommerce Products" as the post type. The importer will create the parent product and all its variations automatically.
 
-Product images are imported along with your product data.  In your CSV/XML file, you'll need a column specifically for image URLs.  The column header might be something like "Product Image," "Featured Image," or "Image URL."  In this column, you'll put the full web address (URL) of each product's image.  Make sure the images are already hosted online somewhere accessible.
+**3. How do I import WooCommerce orders?**
 
-**4. How do I import product categories and tags?**
+Upload a CSV or XML file with your order data and select "WooCommerce Orders" as the post type. You can import standard order fields as well as personalized product fields from PPOM and Extra Product Options for WooCommerce. Map your columns to the corresponding order fields and run the import.
 
-Just like images, categories and tags are handled in your import file.  Create separate columns for each.  For example, one column could be "Product Categories" and another "Product Tags."  If a product belongs to multiple categories or has multiple tags, separate them with commas in the cell.  For example: "Shirts, T-Shirts, Clothing" (for categories) or "men's fashion, summer clothes" (for tags).
+**4. How do I import WooCommerce customers?**
 
-**5. How do I import product reviews?**
+To [import WooCommerce customers](https://www.smackcoders.com/documentation/wp-ultimate-csv-importer-pro/import-woocommerce-customers?utm_source=wordpress_org&utm_medium=readme&utm_campaign=import_woocommerce), prepare a CSV with customer details including name, email, billing, and shipping addresses. Upload the file, choose "WooCommerce Customers" as the post type, map the fields, and click Import.
 
-Importing reviews is a great way to build social proof.  Your import file needs to include the review data (e.g., reviewer name, review text, rating, and the product the review belongs to).  When you upload the file, choose "WooCommerce Reviews" as the post type.  Map the columns in your file to the corresponding review fields in WooCommerce.
+**5. How do I import product images?**
 
-**6. Can I use external URLs for images?**
+Include a column in your CSV with the full URL of each product image. The importer supports featured images, gallery images, and inline images within product descriptions. External URLs and Dropbox links are both supported.
 
-Yes, you can use external URLs (web addresses) for your *featured* product images.  However, for images *inside* the product description (what we call "inline images"), you'll typically need to use shortcodes.
+**6. How do I import product categories and tags?**
 
-**7. How do I include images within the product description?**
+Add a column for categories and a column for tags in your CSV. For products with multiple categories or tags, separate values with commas — for example: "Shirts, T-Shirts, Clothing". The importer will create categories and tags automatically if they do not already exist.
 
-To add images *within* the product description text, you'll use shortcodes.  A common method is to first upload your images to a folder (or a zip file) on your web server. Then, in your product description in your import file, you would use a shortcode that points to those images. The exact shortcode will depend on the plugin you are using.
+**7. Can I migrate WooCommerce products from another store?**
 
-**8. Why is the import button disabled?**
+Yes. Export your products from the source store as a CSV (using WooCommerce's built-in exporter or our WP Ultimate Exporter add-on), then import that file into your new store using this plugin. The same workflow applies to orders, customers, and coupons.
 
-The "Import" button won't be clickable until you've successfully uploaded a CSV or XML file. If you've uploaded a file and the button is still disabled, double-check that your file is saved in UTF-8 format. This is a common requirement for import tools.  Most spreadsheet programs allow you to save files in UTF-8.
+**8. Is there a file size limit?**
 
-**9. How to Import WooCommerce Customers?**  
+The maximum file size depends on your server's `upload_max_filesize` setting, which should be at least 2MB (more for large catalogs). You can adjust this in your hosting control panel or ask your hosting provider. For very large files, the PRO version supports scheduled imports directly from a URL or FTP.
 
-To [import WooCommerce customers](https://www.smackcoders.com/documentation/wp-ultimate-csv-importer-pro/import-woocommerce-customers?utm_source=wordpress_org&utm_medium=readme&utm_campaign=import_woocommerce), follow these steps:  
+**9. Why is the import button disabled?**
 
-1. Prepare a CSV or XML file with customer details, including name, email, billing, and shipping addresses.  
-2. Open the **WP Ultimate CSV Importer** plugin in WordPress.  
-3. Upload your CSV/XML file and choose **WooCommerce Customers** as the post type.  
-4. Map the fields in your file to the corresponding WooCommerce customer attributes.  
-5. Click **Import**, and the plugin will process the file, automatically adding the customers to WooCommerce.  
+The Import button is active only after a file has been successfully uploaded. If the button remains disabled after upload, check that your file is saved in UTF-8 format. Most spreadsheet applications allow you to save as UTF-8 when using "Save As" or "Export."
 
+**10. Can I also export WooCommerce data?**
 
+This plugin handles imports only. To export WooCommerce products, orders, customers, or other data, install the free [WP Ultimate Exporter](https://wordpress.org/plugins/wp-ultimate-exporter) add-on.
 
 == Changelog ==
+
+= 3.0 =
+* Added: WooCommerce imports now support Pre-Flight Validation and Auto Recovery from the core plugin.
+* Improved: Aligned with WP Ultimate CSV Importer 9.0, including the redesigned import interface.
+* Fixed: An SQL injection vulnerability and hardened database queries across import operations.
+
+= 2.9.2 =
+* Tested: Full compatibility with the latest WooCommerce version.
 
 = 2.9.1 =
 * Fix: improve bulk import stability for remote images and AJAX processing.
@@ -205,7 +223,6 @@ To [import WooCommerce customers](https://www.smackcoders.com/documentation/wp-u
 
 = 2.8 =
 * Added: WordPress 6.9 compatibility
-
 
 = 2.7 =
 
@@ -218,7 +235,6 @@ Release date: 2025-06-25
 
 * Fixed: Bugs affecting Product descriptions import.
 
-
 = 2.6 =
 
 Release date: 2025-02-18
@@ -230,7 +246,6 @@ Release date: 2025-02-18
 Release date: 2025-02-04
 
 * New Feature: Added support for Single CSV Import for WooCommerce product variations.
-
 
 = 2.4 =
 
@@ -324,7 +339,7 @@ Resolved: An issue with WooCommerce Stock Status.
 * Added: WordPress 5.7.2 compatibility
 * Fixed: Regular price issue.
 
-= 1.6.1 = 
+= 1.6.1 =
 * Added: WordPress 5.7 compatibility
 * Fixed: visibility import supports both id and value.
 
@@ -366,7 +381,7 @@ Resolved: An issue with WooCommerce Stock Status.
 * Added: Drag & drop Mode
 * UI changes
 
-= 1.4 = 
+= 1.4 =
 * Added: Real-time import log with both web view and Admin view options.
 * Added: product import (simple, grouped, variable, external) and their field
 * Added: Gallery image import(using pipeline)
@@ -379,7 +394,7 @@ Resolved: An issue with WooCommerce Stock Status.
 * Added: Attribute support option
 * Added: Allow authors/editors to import the option
 
-= 1.3 = 
+= 1.3 =
 * Added: Compatibility for WordPress 4.5.3
 * Added: Comma separation support in Product Attribute name, Product & Post category.
 * Fixed: Post Format issue.
@@ -398,13 +413,14 @@ Resolved: An issue with WooCommerce Stock Status.
 * Added: Support for All-in-one SEO.
 * Added: WordPress Custom Field registration on the import flow.
 * Modified: Mapping section UI.
-* Fixed: Unwanted warnings. 
+* Fixed: Unwanted warnings.
 
 = 1.0 =
 * Initial release version. Tested and found to work well without any issues.
 
 == Upgrade Notice ==
 
-= 2.9.1 =
+= 3.0 =
+Upgrade WP Ultimate CSV Importer Free and its add-on Import WooCommerce to enjoy new WooCommerce import capabilities and for a security hardening.
 
-Upgrade now to get latest updates.
+

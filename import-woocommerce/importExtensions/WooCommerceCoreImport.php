@@ -29,7 +29,37 @@ class WooCommerceCoreImport extends ImportHelpers
 		}
 		return WooCommerceCoreImport::$woocommerce_core_instance;
 	}
-	public function woocommerce_orders_import($data_array, $mode, $check, $unikey, $unikey_name, $line_number, $order_meta_data, $update_based_on)
+
+	/**
+	 * Safely update an import detail log counter column.
+	 *
+	 * @param string $log_table_name
+	 * @param string $field
+	 * @param int    $count
+	 * @param string $unikey_name
+	 * @param string $unikey_value
+	 * @return int|false
+	 */
+	private function update_import_log_count( $log_table_name, $field, $count, $unikey_name, $unikey_value ) {
+		global $wpdb;
+		$allowed_fields = array( 'skipped', 'created', 'updated', 'failed' );
+		$allowed_keys = array( 'hash_key', 'templatekey' );
+		if ( ! in_array( $field, $allowed_fields, true ) ) {
+			return false;
+		}
+		if ( ! in_array( $unikey_name, $allowed_keys, true ) ) {
+			$unikey_name = 'hash_key';
+		}
+		return $wpdb->update(
+			$log_table_name,
+			array( $field => (int) $count ),
+			array( $unikey_name => $unikey_value ),
+			array( '%d' ),
+			array( '%s' )
+		);
+	}
+
+	public function woocommerce_orders_import($data_array, $mode, $check, $unikey, $unikey_name, $line_number, $order_meta_data, $update_based_on = 'normal', $duplicate_action = 'skip')
 	{
 		global $wpdb;
 		$helpers_instance = ImportHelpers::getInstance();
@@ -37,104 +67,154 @@ class WooCommerceCoreImport extends ImportHelpers
 
 		$log_table_name = $wpdb->prefix . "import_detail_log";
 
+		$update_based_on = in_array($update_based_on, array('normal', 'skip'), true) ? $update_based_on : 'normal';
+		$duplicate_action = in_array($duplicate_action, array('skip', 'update', 'create'), true) ? $duplicate_action : 'skip';
+		$order_match_fields = array('ORDERID');
+
 		$updated_row_counts = $helpers_instance->update_count($unikey, $unikey_name);
 		$created_count = $updated_row_counts['created'];
 		$updated_count = $updated_row_counts['updated'];
 		$skipped_count = $updated_row_counts['skipped'];
-		if (class_exists('WC_Order')) {
-			// Create a new order instance
-			if ($mode == 'Insert') {
-				$order = wc_create_order();
-				$order_id = $order->save();
-				$mode_of_affect = 'Inserted';
-				if (is_wp_error($order_id) || $order_id == '') {
-					$core_instance->detailed_log[$line_number]['Message'] = "Can't insert this Order. " . $order_id->get_error_message();
-					$core_instance->detailed_log[$line_number]['state'] = 'Skipped';
-					$wpdb->get_results("UPDATE $log_table_name SET skipped = $skipped_count WHERE $unikey_name = '$unikey'");
-					return array('MODE' => $mode, 'ERROR_MSG' => $order_id->get_error_message());
-				}
-				$core_instance->detailed_log[$line_number]['Message'] = 'Inserted Order ID: ' . $order_id;
-				$core_instance->detailed_log[$line_number]['id'] = $order_id;
-				$core_instance->detailed_log[$line_number]['adminLink'] = get_edit_post_link($order_id, true);
-				$core_instance->detailed_log[$line_number]['state'] = 'Inserted';
-				$wpdb->get_results("UPDATE $log_table_name SET created = $created_count WHERE $unikey_name = '$unikey'");
-			} elseif ($mode == 'Update') {
-				$order_id = $data_array['ORDERID'];
-				$update_query = "select ID from {$wpdb->prefix}posts where ID = $order_id";
-				$ID_result = $wpdb->get_results($update_query);
-				if (is_array($ID_result) && !empty($ID_result)) {
-					$retID = $ID_result[0]->ID;
-					$data_array['ID'] = $retID;
-					// wp_update_post($data_array);
-					$mode_of_affect = 'Updated';
 
-					$core_instance->detailed_log[$line_number]['Message'] = 'Updated Order ID: ' . $retID;
-					$core_instance->detailed_log[$line_number]['id'] = $retID;
-					$core_instance->detailed_log[$line_number]['adminLink'] = get_edit_post_link($retID, true);
-					$core_instance->detailed_log[$line_number]['state'] = 'Updated';
-					$wpdb->get_results("UPDATE $log_table_name SET updated = $updated_count WHERE $unikey_name = '$unikey'");
-				} else {
+		$existing_id = $this->find_existing_order_id($data_array, $check);
+		$has_match = $existing_id > 0;
+		$duplicate_handling_active = (
+			$update_based_on === 'normal'
+			&& !empty($check)
+			&& in_array($check, $order_match_fields, true)
+		);
 
-					$core_instance->detailed_log[$line_number]['Message'] = "Skipped.";
-					$core_instance->detailed_log[$line_number]['state'] = 'Skipped';
-					$wpdb->get_results("UPDATE $log_table_name SET skipped = $skipped_count WHERE $unikey_name = '$unikey'");
-					return array('MODE' => $mode);
-				}
-				$order = wc_get_order($data_array['ORDERID']);
-			} else {
-				$core_instance->detailed_log[$line_number]['Message'] = "Skipped.";
+		if ($update_based_on === 'skip' && !empty($check) && in_array($check, $order_match_fields, true) && !$has_match) {
+			$core_instance->detailed_log[$line_number]['Message'] = 'Skipped. No matching record found.';
+			$core_instance->detailed_log[$line_number]['state'] = 'Skipped';
+			$this->update_import_log_count( $log_table_name, 'skipped', $skipped_count, $unikey_name, $unikey );
+			return array('MODE' => $mode);
+		}
+
+		if ($duplicate_handling_active && $has_match && $duplicate_action === 'skip') {
+			$core_instance->detailed_log[$line_number]['Message'] = 'Skipped, Due to duplicate Order found!.';
+			$core_instance->detailed_log[$line_number]['state'] = 'Skipped';
+			$core_instance->detailed_log[$line_number]['id'] = $existing_id;
+			$this->update_import_log_count( $log_table_name, 'skipped', $skipped_count, $unikey_name, $unikey );
+			return array('MODE' => $mode, 'ID' => $existing_id);
+		}
+
+		$run_insert = false;
+		$run_update = false;
+		if ($duplicate_handling_active && $has_match && $duplicate_action === 'update') {
+			$run_update = true;
+			$data_array['ORDERID'] = $existing_id;
+		} elseif ($duplicate_handling_active && $has_match && $duplicate_action === 'create') {
+			$run_insert = true;
+		} elseif ($mode === 'Update' && $has_match) {
+			$run_update = true;
+		} elseif ($mode === 'Update') {
+			$core_instance->detailed_log[$line_number]['Message'] = 'Skipped. No matching record found.';
+			$core_instance->detailed_log[$line_number]['state'] = 'Skipped';
+			$this->update_import_log_count( $log_table_name, 'skipped', $skipped_count, $unikey_name, $unikey );
+			return array('MODE' => $mode);
+		} else {
+			$run_insert = true;
+		}
+
+		if (!class_exists('WC_Order')) {
+			$core_instance->detailed_log[$line_number]['Message'] = "Skipped.";
+			$core_instance->detailed_log[$line_number]['state'] = 'Skipped';
+			$this->update_import_log_count( $log_table_name, 'skipped', $skipped_count, $unikey_name, $unikey );
+			return array('MODE' => $mode);
+		}
+
+		if ($run_insert) {
+			$order = wc_create_order();
+			$order_id = $order->save();
+			$mode_of_affect = 'Inserted';
+			if (is_wp_error($order_id) || $order_id == '') {
+				$error_message = is_wp_error($order_id) ? $order_id->get_error_message() : '';
+				$core_instance->detailed_log[$line_number]['Message'] = "Can't insert this Order. " . $error_message;
 				$core_instance->detailed_log[$line_number]['state'] = 'Skipped';
-				$wpdb->get_results("UPDATE $log_table_name SET skipped = $skipped_count WHERE $unikey_name = '$unikey'");
+				$this->update_import_log_count( $log_table_name, 'skipped', $skipped_count, $unikey_name, $unikey );
+				return array('MODE' => $mode, 'ERROR_MSG' => $error_message);
+			}
+			$core_instance->detailed_log[$line_number]['Message'] = 'Inserted Order ID: ' . $order_id;
+			$core_instance->detailed_log[$line_number]['id'] = $order_id;
+			$core_instance->detailed_log[$line_number]['adminLink'] = get_edit_post_link($order_id, true);
+			$core_instance->detailed_log[$line_number]['state'] = 'Inserted';
+			$this->update_import_log_count( $log_table_name, 'created', $created_count, $unikey_name, $unikey );
+		} elseif ($run_update) {
+			$order_id = isset($data_array['ORDERID']) ? absint($data_array['ORDERID']) : $existing_id;
+			if ($order_id <= 0) {
+				$core_instance->detailed_log[$line_number]['Message'] = 'Skipped. No matching record found.';
+				$core_instance->detailed_log[$line_number]['state'] = 'Skipped';
+				$this->update_import_log_count( $log_table_name, 'skipped', $skipped_count, $unikey_name, $unikey );
 				return array('MODE' => $mode);
 			}
-		}
-		$item_name = $order_meta_data['item_name'];
-		$item_qty = $order_meta_data['item_qty'];
-		$products = explode(',', $item_name);
-		$quantities = explode(',', $item_qty);
-		if ($mode == 'Insert') {
-			$queried_titles = array();
-			foreach ($products as $products_value) {
-				$title = ltrim($products_value);
-				if (is_numeric($products_value)) {
-					$product_ids = $products_value;
-				} elseif (!in_array($title, $queried_titles)) {
-					$product_ids[] = $wpdb->get_var("SELECT ID FROM {$wpdb->prefix}posts WHERE post_title ='$title' AND post_type='product' AND post_status='publish'");
-					if ($product_ids !== null) {
-						$queried_titles[] = $title;
-					}
-				}
+			$data_array['ORDERID'] = $order_id;
+			$data_array['ID'] = $order_id;
+			$mode_of_affect = 'Updated';
+			$core_instance->detailed_log[$line_number]['Message'] = 'Updated Order ID: ' . $order_id;
+			$core_instance->detailed_log[$line_number]['id'] = $order_id;
+			$core_instance->detailed_log[$line_number]['adminLink'] = get_edit_post_link($order_id, true);
+			$core_instance->detailed_log[$line_number]['state'] = 'Updated';
+			$this->update_import_log_count( $log_table_name, 'updated', $updated_count, $unikey_name, $unikey );
+			$order = wc_get_order($order_id);
+			if (!$order) {
+				$core_instance->detailed_log[$line_number]['Message'] = 'Skipped, Due to duplicate Order update failed!.';
+				$core_instance->detailed_log[$line_number]['state'] = 'Skipped';
+				$this->update_import_log_count( $log_table_name, 'skipped', $skipped_count, $unikey_name, $unikey );
+				return array('MODE' => $mode);
 			}
+		} else {
+			$core_instance->detailed_log[$line_number]['Message'] = "Skipped.";
+			$core_instance->detailed_log[$line_number]['state'] = 'Skipped';
+			$this->update_import_log_count( $log_table_name, 'skipped', $skipped_count, $unikey_name, $unikey );
+			return array('MODE' => $mode);
+		}
+		$order_meta_data = is_array($order_meta_data) ? $order_meta_data : array();
+		$item_name = isset($order_meta_data['item_name']) ? $order_meta_data['item_name'] : '';
+		$item_qty = isset($order_meta_data['item_qty']) ? $order_meta_data['item_qty'] : '';
+		$products = ($item_name !== '' && $item_name !== null) ? array_map('trim', explode(',', (string) $item_name)) : array();
+		$quantities = ($item_qty !== '' && $item_qty !== null) ? array_map('trim', explode(',', (string) $item_qty)) : array();
+
+		if ($run_insert) {
+			$product_ids = $this->resolve_order_product_ids($products);
 			for ($i = 0; $i < count($product_ids); $i++) {
 				$my_product = wc_get_product($product_ids[$i]);
-				if (!empty($my_product)) {
-					if ($my_product->is_type('variable')) {
-						$variations = $my_product->get_children();
-						for ($i = 0; $i < count($variations); $i++) {
-							$quantity  = !empty($quantities[$i]) ? $quantities[$i] : '';
-							$variation = !empty($variations[$i]) ? wc_get_product($variations[$i]) : '';
-							if (!empty($variation) && $variation->exists()) {
-								$order->add_product($variation, $quantity);
-							}
-						}
-					} else {
-						$quantity = !empty($quantities[$i]) ? $quantities[$i] : '';
-						if (isset($product_ids[$i]) && !empty($product_ids[$i])) {
-							$order->add_product(wc_get_product($product_ids[$i]), $quantity);
+				if (empty($my_product)) {
+					continue;
+				}
+				if ($my_product->is_type('variable')) {
+					$variations = $my_product->get_children();
+					for ($j = 0; $j < count($variations); $j++) {
+						$quantity  = isset($quantities[$j]) && $quantities[$j] !== '' ? $quantities[$j] : 1;
+						$variation = !empty($variations[$j]) ? wc_get_product($variations[$j]) : false;
+						if (!empty($variation) && $variation->exists()) {
+							$order->add_product($variation, $quantity);
 						}
 					}
+				} else {
+					$quantity = isset($quantities[$i]) && $quantities[$i] !== '' ? $quantities[$i] : 1;
+					$order->add_product($my_product, $quantity);
 				}
 			}
+			$this->apply_mapped_line_item_totals($order, $order_meta_data);
+			$this->apply_mapped_fee_items($order, $order_meta_data);
+			$this->apply_mapped_shipping_items($order, $order_meta_data);
 		}
+
 		// Set customer information
-		$customer_user = $order_meta_data['customer_user'];
+		$customer_user = isset($order_meta_data['customer_user']) ? $order_meta_data['customer_user'] : '';
 		if (is_numeric($customer_user)) {
-			$customer_user_id = $customer_user;
-		} else {
+			$customer_user_id = absint($customer_user);
+		} elseif (!empty($customer_user)) {
 			$email = $customer_user;
-			$customer_user_id = $wpdb->get_var("SELECT ID FROM {$wpdb->prefix}users WHERE user_email='$email'");
+			$customer_user_id = absint($wpdb->get_var($wpdb->prepare(
+				"SELECT ID FROM {$wpdb->prefix}users WHERE user_email = %s",
+				$email
+			)));
+		} else {
+			$customer_user_id = 0;
 		}
-		$customer_note = $data_array['customer_note'];
+		$customer_note = isset($data_array['customer_note']) ? $data_array['customer_note'] : '';
 
 		// Replace with the customer's user ID
 		$order->set_customer_id($customer_user_id);
@@ -160,8 +240,6 @@ class WooCommerceCoreImport extends ImportHelpers
 		$shipping_phone = isset($order_meta_data['shipping_phone']) ? $order_meta_data['shipping_phone'] : '';
 		$shipping_email = isset($order_meta_data['shipping_email']) ? $order_meta_data['shipping_email'] : '';
 		$shipping_state = isset($order_meta_data['shipping_state']) ? $order_meta_data['shipping_state'] : '';
-
-
 
 		// Set billing and shipping address (replace with actual details)
 		$billing_address = array(
@@ -193,36 +271,69 @@ class WooCommerceCoreImport extends ImportHelpers
 		$order->set_address($billing_address, 'billing');
 		$order->set_address($shipping_address, 'shipping');
 
-		// Set payment method (replace with actual payment method)
-		$payment_method = $order_meta_data['payment_method']; // Direct bank transfer
-		$order_currency = $order_meta_data['order_currency'];
+		$payment_method = isset($order_meta_data['payment_method']) ? $order_meta_data['payment_method'] : '';
+		$order_currency = isset($order_meta_data['order_currency']) ? $order_meta_data['order_currency'] : '';
 
-		$order->set_payment_method($payment_method);
+		if ($payment_method !== '') {
+			$order->set_payment_method($payment_method);
+		}
 		$order->set_customer_note($customer_note);
-		$order->set_currency($order_currency);
-		// Calculate totals
-		$order->calculate_totals();
-		
-		$order->update_meta_data( 'ywot_tracking_code', $order_meta_data['ywot_tracking_code'] );
-		$order->update_meta_data( 'ywot_tracking_postcode', $order_meta_data['ywot_tracking_postcode']);
-		$order->update_meta_data( 'ywot_carrier_id', $order_meta_data['ywot_carrier_id'] );
-		$order->update_meta_data( 'ywot_pick_up_date', $order_meta_data['ywot_pick_up_date'] );
-		$order->update_meta_data( 'ywot_estimated_delivery_date', $order_meta_data['ywot_estimated_delivery_date'] );
-		$order->update_meta_data( 'ywot_picked_up', $order_meta_data['ywot_picked_up'] );
+		if ($order_currency !== '') {
+			$order->set_currency($order_currency);
+		}
+
+		$order->calculate_totals(false);
+		$this->apply_mapped_order_financial_fields($order, $order_meta_data);
+
+		$ywot_keys = array(
+			'ywot_tracking_code',
+			'ywot_tracking_postcode',
+			'ywot_carrier_id',
+			'ywot_pick_up_date',
+			'ywot_estimated_delivery_date',
+			'ywot_picked_up',
+		);
+		foreach ($ywot_keys as $ywot_key) {
+			if (isset($order_meta_data[$ywot_key]) && $order_meta_data[$ywot_key] !== '') {
+				$order->update_meta_data($ywot_key, $order_meta_data[$ywot_key]);
+			}
+		}
+		if (isset($order_meta_data['recorded_sales']) && $order_meta_data['recorded_sales'] !== '') {
+			$recorded = strtolower(trim((string) $order_meta_data['recorded_sales']));
+			$order->update_meta_data(
+				'_recorded_sales',
+				in_array($recorded, array('1', 'yes', 'true'), true) ? 'yes' : 'no'
+			);
+		}
+
+		$parsed_order_date = $this->parse_order_date($data_array);
+		if ($parsed_order_date) {
+			$order->set_date_created($parsed_order_date);
+		}
 
 		$order_id = $order->save();
-		// $order = wc_get_order( $order_id );
-		// $order->set_status( 'wc-completed' );
-		$module = $wpdb->get_var("SELECT post_type FROM {$wpdb->prefix}posts where id=$order_id");
+
+		if ($parsed_order_date && $order_id) {
+			$wpdb->update(
+				$wpdb->posts,
+				array(
+					'post_date'     => $parsed_order_date,
+					'post_date_gmt' => get_gmt_from_date($parsed_order_date),
+				),
+				array('ID' => $order_id)
+			);
+		}
+
+		$module = $wpdb->get_var($wpdb->prepare("SELECT post_type FROM {$wpdb->prefix}posts WHERE ID = %d", absint($order_id)));
 		$order_status = $data_array['order_status'];
 		global $wpdb;
 		if ($module == 'shop_order_placehold') {
 			if (!empty($order_status)) {
-				$wpdb->get_results("Update {$wpdb->prefix}wc_orders set status='$order_status' where id=$order_id");
+				$wpdb->query($wpdb->prepare("UPDATE {$wpdb->prefix}wc_orders SET status = %s WHERE id = %d", $order_status, absint($order_id)));
 			}
 		} else {
 			if (!empty($order_status)) {
-				$wpdb->get_results("Update {$wpdb->prefix}posts set post_status='$order_status' where id=$order_id");
+				$wpdb->query($wpdb->prepare("UPDATE {$wpdb->prefix}posts SET post_status = %s WHERE ID = %d", $order_status, absint($order_id)));
 			}
 		}
 		$wpdb->update(
@@ -232,10 +343,240 @@ class WooCommerceCoreImport extends ImportHelpers
 			),
 			array('id' => $order_id)
 		);
-		// Save the order
 		$returnArr['ID'] = $order_id;
 		$returnArr['MODE'] = $mode_of_affect;
 		return $returnArr;
+	}
+
+	private function parse_order_date($data_array)
+	{
+		if (empty($data_array['order_date'])) {
+			return false;
+		}
+		$order_date_raw = trim((string) $data_array['order_date']);
+		if ($order_date_raw === '') {
+			return false;
+		}
+		if (strpos($order_date_raw, '.') !== false) {
+			$order_date_raw = str_replace('.', '-', $order_date_raw);
+		}
+		$timestamp = strtotime($order_date_raw);
+		if (!$timestamp) {
+			return false;
+		}
+		return date('Y-m-d H:i:s', $timestamp);
+	}
+
+	private function resolve_order_product_ids($products)
+	{
+		global $wpdb;
+		$product_ids = array();
+		if (!is_array($products)) {
+			return $product_ids;
+		}
+		foreach ($products as $products_value) {
+			$products_value = trim((string) $products_value);
+			if ($products_value === '') {
+				continue;
+			}
+			if (is_numeric($products_value)) {
+				$product_ids[] = absint($products_value);
+				continue;
+			}
+			$found = $wpdb->get_var($wpdb->prepare(
+				"SELECT ID FROM {$wpdb->prefix}posts WHERE post_title = %s AND post_type IN ('product','product_variation') AND post_status = 'publish' ORDER BY ID DESC LIMIT 1",
+				$products_value
+			));
+			if (!empty($found)) {
+				$product_ids[] = absint($found);
+			}
+		}
+		return $product_ids;
+	}
+
+	private function apply_mapped_order_financial_fields($order, $order_meta_data)
+	{
+		if (empty($order) || !is_array($order_meta_data)) {
+			return;
+		}
+
+		if (isset($order_meta_data['payment_method_title']) && $order_meta_data['payment_method_title'] !== '') {
+			$order->set_payment_method_title($order_meta_data['payment_method_title']);
+		}
+		if (isset($order_meta_data['transaction_id']) && $order_meta_data['transaction_id'] !== '') {
+			$order->set_transaction_id($order_meta_data['transaction_id']);
+		}
+		if (isset($order_meta_data['order_shipping']) && $order_meta_data['order_shipping'] !== '') {
+			$order->set_shipping_total(wc_format_decimal($order_meta_data['order_shipping']));
+		}
+		if (isset($order_meta_data['order_shipping_tax']) && $order_meta_data['order_shipping_tax'] !== '') {
+			$order->set_shipping_tax(wc_format_decimal($order_meta_data['order_shipping_tax']));
+		}
+		if (isset($order_meta_data['order_tax']) && $order_meta_data['order_tax'] !== '') {
+			$order->set_cart_tax(wc_format_decimal($order_meta_data['order_tax']));
+		}
+		if (isset($order_meta_data['cart_discount']) && $order_meta_data['cart_discount'] !== '') {
+			$order->set_discount_total(wc_format_decimal($order_meta_data['cart_discount']));
+		}
+		if (isset($order_meta_data['cart_discount_tax']) && $order_meta_data['cart_discount_tax'] !== '') {
+			$order->set_discount_tax(wc_format_decimal($order_meta_data['cart_discount_tax']));
+		}
+		if (isset($order_meta_data['order_total']) && $order_meta_data['order_total'] !== '') {
+			$order->set_total(wc_format_decimal($order_meta_data['order_total']));
+		}
+	}
+
+	private function apply_mapped_line_item_totals($order, $order_meta_data)
+	{
+		if (empty($order) || !is_array($order_meta_data)) {
+			return;
+		}
+
+		$line_totals = $this->csv_list($order_meta_data, 'item_line_total');
+		$line_subtotals = $this->csv_list($order_meta_data, 'item_line_subtotal');
+		$line_taxes = $this->csv_list($order_meta_data, 'item_line_tax');
+		$line_subtotal_taxes = $this->csv_list($order_meta_data, 'item_line_subtotal_tax');
+		$line_qtys = $this->csv_list($order_meta_data, 'item_qty');
+		$tax_classes = $this->csv_list($order_meta_data, 'item_tax_class');
+		$product_ids = $this->csv_list($order_meta_data, 'item_product_id');
+		$variation_ids = $this->csv_list($order_meta_data, 'item_variation_id');
+
+		if (
+			empty($line_totals) && empty($line_subtotals) && empty($line_taxes)
+			&& empty($line_subtotal_taxes) && empty($tax_classes)
+			&& empty($product_ids) && empty($variation_ids)
+		) {
+			return;
+		}
+
+		$index = 0;
+		foreach ($order->get_items('line_item') as $item) {
+			if (isset($line_qtys[$index]) && $line_qtys[$index] !== '' && is_numeric($line_qtys[$index])) {
+				$item->set_quantity(wc_stock_amount($line_qtys[$index]));
+			}
+			if (isset($line_subtotals[$index]) && $line_subtotals[$index] !== '') {
+				$item->set_subtotal(wc_format_decimal($line_subtotals[$index]));
+			}
+			if (isset($line_totals[$index]) && $line_totals[$index] !== '') {
+				$item->set_total(wc_format_decimal($line_totals[$index]));
+			}
+			if (isset($line_subtotal_taxes[$index]) && $line_subtotal_taxes[$index] !== '') {
+				$item->set_subtotal_tax(wc_format_decimal($line_subtotal_taxes[$index]));
+			}
+			if (isset($line_taxes[$index]) && $line_taxes[$index] !== '') {
+				$item->set_total_tax(wc_format_decimal($line_taxes[$index]));
+			}
+			if (isset($tax_classes[$index]) && $tax_classes[$index] !== '') {
+				$item->set_tax_class($tax_classes[$index]);
+			}
+			if (isset($product_ids[$index]) && is_numeric($product_ids[$index])) {
+				$item->set_product_id(absint($product_ids[$index]));
+			}
+			if (isset($variation_ids[$index]) && is_numeric($variation_ids[$index])) {
+				$item->set_variation_id(absint($variation_ids[$index]));
+			}
+			$item->save();
+			$index++;
+		}
+	}
+
+	private function apply_mapped_fee_items($order, $order_meta_data)
+	{
+		$fee_names = $this->csv_list($order_meta_data, 'fee_name');
+		if (empty($fee_names) || !class_exists('WC_Order_Item_Fee')) {
+			return;
+		}
+		$fee_totals = $this->csv_list($order_meta_data, 'fee_line_total');
+		$fee_taxes = $this->csv_list($order_meta_data, 'fee_line_tax');
+		$fee_tax_classes = $this->csv_list($order_meta_data, 'fee_tax_class');
+
+		foreach ($fee_names as $index => $fee_name) {
+			$fee_name = trim((string) $fee_name);
+			if ($fee_name === '') {
+				continue;
+			}
+			$fee = new \WC_Order_Item_Fee();
+			$fee->set_name($fee_name);
+			if (isset($fee_totals[$index]) && $fee_totals[$index] !== '') {
+				$fee->set_total(wc_format_decimal($fee_totals[$index]));
+			}
+			if (isset($fee_taxes[$index]) && $fee_taxes[$index] !== '') {
+				$fee->set_total_tax(wc_format_decimal($fee_taxes[$index]));
+			}
+			if (isset($fee_tax_classes[$index]) && $fee_tax_classes[$index] !== '') {
+				$fee->set_tax_class($fee_tax_classes[$index]);
+			}
+			$order->add_item($fee);
+		}
+	}
+
+	private function apply_mapped_shipping_items($order, $order_meta_data)
+	{
+		$shipment_names = $this->csv_list($order_meta_data, 'shipment_name');
+		if (empty($shipment_names) && (!isset($order_meta_data['order_shipping']) || $order_meta_data['order_shipping'] === '')) {
+			return;
+		}
+		if (!class_exists('WC_Order_Item_Shipping')) {
+			return;
+		}
+
+		$method_ids = $this->csv_list($order_meta_data, 'shipment_method_id');
+		$costs = $this->csv_list($order_meta_data, 'shipment_cost');
+
+		if (empty($shipment_names) && isset($order_meta_data['order_shipping']) && $order_meta_data['order_shipping'] !== '') {
+			$shipment_names = array('Shipping');
+			$costs = array($order_meta_data['order_shipping']);
+		}
+
+		foreach ($shipment_names as $index => $shipment_name) {
+			$shipment_name = trim((string) $shipment_name);
+			if ($shipment_name === '') {
+				continue;
+			}
+			$shipping = new \WC_Order_Item_Shipping();
+			$shipping->set_method_title($shipment_name);
+			if (isset($method_ids[$index]) && $method_ids[$index] !== '') {
+				$shipping->set_method_id($method_ids[$index]);
+			} else {
+				$shipping->set_method_id('flat_rate');
+			}
+			if (isset($costs[$index]) && $costs[$index] !== '') {
+				$shipping->set_total(wc_format_decimal($costs[$index]));
+			}
+			$order->add_item($shipping);
+		}
+	}
+
+	private function csv_list($order_meta_data, $key)
+	{
+		if (!isset($order_meta_data[$key]) || $order_meta_data[$key] === '' || $order_meta_data[$key] === null) {
+			return array();
+		}
+		$parts = explode(',', (string) $order_meta_data[$key]);
+		return array_map('trim', $parts);
+	}
+
+	private function find_existing_order_id($data_array, $check)
+	{
+		if ($check !== 'ORDERID') {
+			return 0;
+		}
+		$order_id = isset($data_array['ORDERID']) ? trim((string) $data_array['ORDERID']) : '';
+		if ($order_id === '' || !is_numeric($order_id)) {
+			return 0;
+		}
+		$order_id = absint($order_id);
+		if ($order_id <= 0) {
+			return 0;
+		}
+		$post = get_post($order_id);
+		if (!$post) {
+			return 0;
+		}
+		if (!in_array($post->post_type, array('shop_order', 'shop_order_placehold'), true)) {
+			return 0;
+		}
+		return $order_id;
 	}
 
 	public function woocommerce_coupons_import($data_array , $mode , $check , $unikey , $unikey_name, $line_number) {
@@ -271,18 +612,21 @@ class WooCommerceCoreImport extends ImportHelpers
 			
 			if(is_wp_error($retID) || $retID == '') {
 				$core_instance->detailed_log[$line_number]['Message'] = "Can't insert this Coupon. " . $retID->get_error_message();
-				$wpdb->get_results("UPDATE $log_table_name SET skipped = $skipped_count WHERE $unikey_name = '$unikey'");
+				$this->update_import_log_count( $log_table_name, 'skipped', $skipped_count, $unikey_name, $unikey );
 				return array('MODE' => $mode, 'ERROR_MSG' => $retID->get_error_message());
 			}
 			$core_instance->detailed_log[$line_number]['Message'] = 'Inserted Coupon ID: ' . $retID;
-			$wpdb->get_results("UPDATE $log_table_name SET created = $created_count WHERE $unikey_name = '$unikey'");
+			$this->update_import_log_count( $log_table_name, 'created', $created_count, $unikey_name, $unikey );
 
 		} else {
 				if($check == 'COUPONID'){
-					$coupon_id = $data_array['COUPONID'];
+					$coupon_id = absint($data_array['COUPONID']);
 					$post_type = $data_array['post_type'];
-					$update_query = "select ID from {$wpdb->prefix}posts where ID = '$coupon_id' and post_type = '$post_type' and post_status not in('trash','draft') order by ID DESC";
-					$ID_result = $wpdb->get_results($update_query);
+					$ID_result = $wpdb->get_results($wpdb->prepare(
+						"SELECT ID FROM {$wpdb->prefix}posts WHERE ID = %d AND post_type = %s AND post_status NOT IN ('trash','draft') ORDER BY ID DESC",
+						$coupon_id,
+						$post_type
+					));
 
 					if (is_array($ID_result) && !empty($ID_result)) {
 						$retID = $ID_result[0]->ID;
@@ -291,16 +635,16 @@ class WooCommerceCoreImport extends ImportHelpers
 						$mode_of_affect = 'Updated';
 
 						$core_instance->detailed_log[$line_number]['Message'] = 'Updated Coupon ID: ' . $retID;
-						$wpdb->get_results("UPDATE $log_table_name SET updated = $updated_count WHERE $unikey_name = '$unikey'");			
+						$this->update_import_log_count( $log_table_name, 'updated', $updated_count, $unikey_name, $unikey );			
 					} else{
 						$core_instance->detailed_log[$line_number]['Message'] = "Skipped.";
-						$wpdb->get_results("UPDATE $log_table_name SET skipped = $skipped_count WHERE $unikey_name = '$unikey'");
+						$this->update_import_log_count( $log_table_name, 'skipped', $skipped_count, $unikey_name, $unikey );
 						return array('MODE' => $mode);
 					}
 				}
 				else{
 					$core_instance->detailed_log[$line_number]['Message'] = "Skipped.";
-					$wpdb->get_results("UPDATE $log_table_name SET skipped = $skipped_count WHERE $unikey_name = '$unikey'");
+					$this->update_import_log_count( $log_table_name, 'skipped', $skipped_count, $unikey_name, $unikey );
 					return array('MODE' => $mode);
 				}
 			//} 
@@ -488,7 +832,7 @@ class WooCommerceCoreImport extends ImportHelpers
 	// 	}
 	// 	return $returnArr;
 	// }
-	 public function woocommerce_product_import($post_values, $mode, $check, $unikey_value, $unikey_name, $hash_key, $line_number, $unmatched_row,$header_array,$value_array, $wpml_values = null,$product_meta_data=null,$attr_data=null){
+	 public function woocommerce_product_import($post_values, $mode, $check, $unikey_value, $unikey_name, $hash_key, $line_number, $unmatched_row,$header_array,$value_array, $wpml_values = null,$product_meta_data=null,$attr_data=null, $update_based_on = 'normal', $duplicate_action = 'skip'){
 		try{
 			if(!empty($product_meta_data)){
 				$post_values = array_merge($post_values,$product_meta_data);
@@ -522,33 +866,33 @@ class WooCommerceCoreImport extends ImportHelpers
 				}
 				$sku = $post_values['PRODUCTSKU'];
 				if($check == 'ID'){	
-					$ID = $post_values['ID'];	
+					$ID = absint($post_values['ID']);	
 					if($sitepress != null && isset($wpml_values['language_code']) && !empty($wpml_values['language_code'])) {
 						$language_code = $wpml_values['language_code'];
-						$get_result =  $wpdb->get_results("SELECT DISTINCT p.ID FROM {$wpdb->prefix}posts p join {$wpdb->prefix}icl_translations pm ON p.ID = pm.element_id WHERE p.ID = $title AND p.post_type = '$post_type' AND p.post_status != 'trash' AND pm.language_code = '{$language_code}'");
+						$get_result =  $wpdb->get_results($wpdb->prepare("SELECT DISTINCT p.ID FROM {$wpdb->prefix}posts p join {$wpdb->prefix}icl_translations pm ON p.ID = pm.element_id WHERE p.ID = %d AND p.post_type = %s AND p.post_status != 'trash' AND pm.language_code = %s", $ID, $post_type, $language_code));
 					}
 					elseif(isset($poly_values) && !empty($poly_values)){
 						$language_code = $poly_values['language_code'];
 						if(!empty($ID)){
-							$get_result=$wpdb->get_results("SELECT DISTINCT p.ID FROM {$wpdb->prefix}posts as p inner join {$wpdb->prefix}term_relationships as tr ON tr.object_id=p.ID inner join {$wpdb->prefix}term_taxonomy as tax on tax.term_taxonomy_id=tr.term_taxonomy_id inner join {$wpdb->prefix}terms as t on t.term_id=tax.term_id  where tax.taxonomy ='language'  and t.slug='$language_code' and p.ID=$ID AND p.post_status != 'trash'");
+							$get_result=$wpdb->get_results($wpdb->prepare("SELECT DISTINCT p.ID FROM {$wpdb->prefix}posts as p inner join {$wpdb->prefix}term_relationships as tr ON tr.object_id=p.ID inner join {$wpdb->prefix}term_taxonomy as tax on tax.term_taxonomy_id=tr.term_taxonomy_id inner join {$wpdb->prefix}terms as t on t.term_id=tax.term_id  where tax.taxonomy ='language'  and t.slug=%s and p.ID=%d AND p.post_status != 'trash'", $language_code, $ID));
 						}
 					}
 					else{
-						$get_result =  $wpdb->get_results("SELECT ID FROM {$wpdb->prefix}posts WHERE ID = '$ID' AND post_type = '$post_type' AND post_status != 'trash' order by ID DESC ");			
+						$get_result =  $wpdb->get_results($wpdb->prepare("SELECT ID FROM {$wpdb->prefix}posts WHERE ID = %d AND post_type = %s AND post_status != 'trash' order by ID DESC ", $ID, $post_type));			
 					}
 				}
 				if($check == 'post_title'){
 					$title = $post_values['post_title'];
 					if($sitepress != null && isset($wpml_values['language_code']) && !empty($wpml_values['language_code'])) {
 						$language_code = $wpml_values['language_code'];
-						$get_result =  $wpdb->get_results("SELECT DISTINCT p.ID FROM {$wpdb->prefix}posts p join {$wpdb->prefix}icl_translations pm ON p.ID = pm.element_id WHERE p.post_title = '$title' AND p.post_type = '$post_type' AND p.post_status != 'trash' AND pm.language_code = '{$language_code}'");
+						$get_result =  $wpdb->get_results($wpdb->prepare("SELECT DISTINCT p.ID FROM {$wpdb->prefix}posts p join {$wpdb->prefix}icl_translations pm ON p.ID = pm.element_id WHERE p.post_title = %s AND p.post_type = %s AND p.post_status != 'trash' AND pm.language_code = %s", $title, $post_type, $language_code));
 					}
 					elseif(isset($poly_values) && !empty($poly_values)){
 						$language_code = $poly_values['language_code'];
-						$get_result=$wpdb->get_results("SELECT DISTINCT p.ID FROM {$wpdb->prefix}posts as p inner join {$wpdb->prefix}term_relationships as tr ON tr.object_id=p.ID inner join {$wpdb->prefix}term_taxonomy as tax on tax.term_taxonomy_id=tr.term_taxonomy_id inner join {$wpdb->prefix}terms as t on t.term_id=tax.term_id  where tax.taxonomy ='language'  and t.slug='$language_code' and p.post_title='$title' AND p.post_status != 'trash'");
+						$get_result=$wpdb->get_results($wpdb->prepare("SELECT DISTINCT p.ID FROM {$wpdb->prefix}posts as p inner join {$wpdb->prefix}term_relationships as tr ON tr.object_id=p.ID inner join {$wpdb->prefix}term_taxonomy as tax on tax.term_taxonomy_id=tr.term_taxonomy_id inner join {$wpdb->prefix}terms as t on t.term_id=tax.term_id  where tax.taxonomy ='language'  and t.slug=%s and p.post_title=%s AND p.post_status != 'trash'", $language_code, $title));
 					}
 					else{
-						$get_result =  $wpdb->get_results("SELECT ID FROM {$wpdb->prefix}posts WHERE post_title = \"$title\" AND post_type = \"$post_type\" AND post_status != \"trash\" order by ID DESC ");		
+						$get_result =  $wpdb->get_results($wpdb->prepare("SELECT ID FROM {$wpdb->prefix}posts WHERE post_title = %s AND post_type = %s AND post_status != 'trash' order by ID DESC ", $title, $post_type));		
 					}
 					
 				}
@@ -556,150 +900,109 @@ class WooCommerceCoreImport extends ImportHelpers
 					$name = $post_values['post_name'];
 					if($sitepress != null && isset($wpml_values['language_code']) && !empty($wpml_values['language_code'])) {
 						$language_code = $wpml_values['language_code'];
-						$get_result =  $wpdb->get_results("SELECT DISTINCT p.ID FROM {$wpdb->prefix}posts p join {$wpdb->prefix}icl_translations pm ON p.ID = pm.element_id WHERE p.post_name = '$name' AND p.post_type = '$post_type' AND p.post_status != 'trash' AND pm.language_code = '{$language_code}'");
+						$get_result =  $wpdb->get_results($wpdb->prepare("SELECT DISTINCT p.ID FROM {$wpdb->prefix}posts p join {$wpdb->prefix}icl_translations pm ON p.ID = pm.element_id WHERE p.post_name = %s AND p.post_type = %s AND p.post_status != 'trash' AND pm.language_code = %s", $name, $post_type, $language_code));
 					}
 					elseif(isset($poly_values) && !empty($poly_values)){
 						$language_code = $poly_values['language_code'];
-						$get_result=$wpdb->get_results("SELECT DISTINCT p.ID FROM {$wpdb->prefix}posts as p inner join {$wpdb->prefix}term_relationships as tr ON tr.object_id=p.ID inner join {$wpdb->prefix}term_taxonomy as tax on tax.term_taxonomy_id=tr.term_taxonomy_id inner join {$wpdb->prefix}terms as t on t.term_id=tax.term_id  where tax.taxonomy ='language'  and t.slug='$language_code' and p.post_name='$name'");
+						$get_result=$wpdb->get_results($wpdb->prepare("SELECT DISTINCT p.ID FROM {$wpdb->prefix}posts as p inner join {$wpdb->prefix}term_relationships as tr ON tr.object_id=p.ID inner join {$wpdb->prefix}term_taxonomy as tax on tax.term_taxonomy_id=tr.term_taxonomy_id inner join {$wpdb->prefix}terms as t on t.term_id=tax.term_id  where tax.taxonomy ='language'  and t.slug=%s and p.post_name=%s", $language_code, $name));
 					}
 					else{
-					$get_result =  $wpdb->get_results("SELECT ID FROM {$wpdb->prefix}posts WHERE post_name = '$name' AND post_type = '$post_type' AND post_status != 'trash' order by ID DESC ");	
+					$get_result =  $wpdb->get_results($wpdb->prepare("SELECT ID FROM {$wpdb->prefix}posts WHERE post_name = %s AND post_type = %s AND post_status != 'trash' order by ID DESC ", $name, $post_type));	
 					}
 				}
 				if($check == 'PRODUCTSKU'){
 					$sku = $post_values['PRODUCTSKU'];
 					if($sitepress != null && isset($wpml_values['language_code']) && !empty($wpml_values['language_code'])) {
 						$language_code = $wpml_values['language_code'];
-						$get_result =  $wpdb->get_results("SELECT DISTINCT p.ID FROM {$wpdb->prefix}posts p join {$wpdb->prefix}postmeta pm ON p.ID = pm.post_id inner join {$wpdb->prefix}icl_translations icl ON pm.post_id = icl.element_id WHERE p.post_type = '$post_type' AND p.post_status != 'trash' and pm.meta_value = '$sku' and icl.language_code = '{$language_code}'");               
+						$get_result =  $wpdb->get_results($wpdb->prepare("SELECT DISTINCT p.ID FROM {$wpdb->prefix}posts p join {$wpdb->prefix}postmeta pm ON p.ID = pm.post_id inner join {$wpdb->prefix}icl_translations icl ON pm.post_id = icl.element_id WHERE p.post_type = %s AND p.post_status != 'trash' and pm.meta_value = %s and icl.language_code = %s", $post_type, $sku, $language_code));               
 					}
 					elseif(isset($poly_values) && !empty($poly_values)){
 						$language_code = $poly_values['language_code'];
-						$get_result=$wpdb->get_results("SELECT DISTINCT p.ID FROM {$wpdb->prefix}posts as p inner join {$wpdb->prefix}postmeta pm ON p.ID=pm.post_id inner join {$wpdb->prefix}term_relationships as tr ON tr.object_id=p.ID inner join {$wpdb->prefix}term_taxonomy as tax on tax.term_taxonomy_id=tr.term_taxonomy_id inner join {$wpdb->prefix}terms as t on t.term_id=tax.term_id  where tax.taxonomy ='language'  and t.slug='$language_code' and p.post_name='$name' and pm.meta_value = '$sku'");
+						$get_result=$wpdb->get_results($wpdb->prepare("SELECT DISTINCT p.ID FROM {$wpdb->prefix}posts as p inner join {$wpdb->prefix}postmeta pm ON p.ID=pm.post_id inner join {$wpdb->prefix}term_relationships as tr ON tr.object_id=p.ID inner join {$wpdb->prefix}term_taxonomy as tax on tax.term_taxonomy_id=tr.term_taxonomy_id inner join {$wpdb->prefix}terms as t on t.term_id=tax.term_id  where tax.taxonomy ='language'  and t.slug=%s and p.post_name=%s and pm.meta_value = %s", $language_code, $name, $sku));
 					}
 					else{
-						$get_result =  $wpdb->get_results("SELECT DISTINCT p.ID FROM {$wpdb->prefix}posts p join {$wpdb->prefix}postmeta pm ON p.ID = pm.post_id WHERE p.post_type = '$post_type' AND p.post_status != 'trash' and pm.meta_value = '$sku' ");
+						$get_result =  $wpdb->get_results($wpdb->prepare("SELECT DISTINCT p.ID FROM {$wpdb->prefix}posts p join {$wpdb->prefix}postmeta pm ON p.ID = pm.post_id WHERE p.post_type = %s AND p.post_status != 'trash' and pm.meta_value = %s ", $post_type, $sku));
 					}
 				}
-				$update = array('ID','post_title','post_name','PRODUCTSKU');
-				if($mode == 'Insert'){
-					if (isset($get_result) && is_array($get_result) && !empty($get_result)) {
-						#skipped
-						$core_instance->detailed_log[$line_number]['Message'] = "Skipped, Due to duplicate Product found!.";
+				$update_based_on = in_array($update_based_on, array('normal', 'skip'), true) ? $update_based_on : 'normal';
+				$duplicate_action = in_array($duplicate_action, array('skip', 'update', 'create'), true) ? $duplicate_action : 'skip';
+				$get_result = isset($get_result) ? $get_result : array();
+				$core_match_fields = array('ID', 'post_title', 'post_name', 'PRODUCTSKU');
+				$has_match = is_array($get_result) && !empty($get_result);
+				$product = null;
+				$product_id = '';
+				$type = 'WooCommerce Product';
+
+				if ($update_based_on === 'skip' && !empty($check) && in_array($check, $core_match_fields, true) && !$has_match) {
+					$core_instance->detailed_log[$line_number]['Message'] = 'Skipped. No matching record found.';
+					$core_instance->detailed_log[$line_number]['state'] = 'Skipped';
+					$this->update_import_log_count( $log_table_name, 'skipped', $skipped_count, $unikey_name, $unikey_value );
+					return array('MODE' => $mode);
+				}
+
+				if ($mode == 'Insert') {
+					if ($has_match && !empty($check) && $duplicate_action === 'skip' && $update_based_on === 'normal') {
+						$core_instance->detailed_log[$line_number]['Message'] = 'Skipped, Due to duplicate Product found!.';
 						$core_instance->detailed_log[$line_number]['state'] = 'Skipped';
-						$wpdb->get_results("UPDATE $log_table_name SET skipped = $skipped_count WHERE $unikey_name = '$unikey_value'");
+						$this->update_import_log_count( $log_table_name, 'skipped', $skipped_count, $unikey_name, $unikey_value );
 						return array('MODE' => $mode);
 					}
-					else{
-						$post_values['produc_type'] = isset($post_values['product_type']) ? $post_values['product_type'] : 'simple';
-						if (isset($post_values['produc_type'])) {
-							$pt = (int) ($post_values['product_type'] ?? 1);
-							$product_type = $pt;
-							if ($pt === 1) {
-								$product_type = 'simple';
-							}
-							if ($pt === 2) {
-								$product_type = 'grouped';
-							}
-							if ($pt === 3) {
-								$product_type = 'external';
-							}
-							if ($pt === 4) {
-								$product_type = 'variable';
-							}
-							if ($pt === 5) {
-								$product_type = 'subscription';
-							}
-							if ($pt === 6) {
-								$product_type = 'variable-subscription';
-							}
-							if ($pt === 7) {
-								$product_type = 'bundle';
-							}	
-							if ($pt === 8) {
-								$product_type = 'variation';
-							}
-							if ($pt === 9) {
-								$product_type = 'jet_booking';
-							}
-							if($product_type == 'external'){
-								$product = new \WC_Product_External();
-							}
-							elseif($product_type == 'variable'){
-								$product = new \WC_Product_Variable();
-							}
-							elseif($product_type == 'grouped'){
-								$product = new	\WC_Product_Grouped();
-							}
-							elseif($product_type == 'variation'){
-								$product = new \WC_Product_Variation();							
-							}
-							elseif($product_type == 'jet_booking'){
-								$product = new \WC_Product_Jet_Booking();							
-							}
-							else{
-								$product = new  \WC_Product_Simple();
-							}
-							
-							$title = $post_values['post_title'];
-							$post_status = $post_values['post_status'] ?? 'publish';
-		
-							$product->set_name($title);
-							
-							if (!empty($post_values['post_name'])) {
-    $custom_slug = sanitize_title($post_values['post_name']);
-    $product->set_slug($custom_slug);
-}
-							
-if (!empty($post_values['post_excerpt']) && method_exists($product, 'set_short_description')) {
-    $product->set_short_description($post_values['post_excerpt']);
-}
-
-if (isset($post_values['post_content']) && !empty($post_values['post_content']) && $post_values['post_content'] !== null) {
-    $content = html_entity_decode($post_values['post_content']);
-    $content = str_replace('\n', "\n", $content);
-    $product->set_description($content);
-}
-
-							// Set the SKU for the current product if it doesn't already exist.
-							$prod_sku = $post_values['PRODUCTSKU'] ?? null;
-							$sku_check = isset($prod_sku) ?  wc_get_product_id_by_sku( wc_clean($prod_sku) ) : 1;
-							if (($sku_check == 0)  && empty($poly_values)) {
-								$product->set_sku(wc_clean($prod_sku));
-							}
-							else{
-								if(!empty($poly_values)){
-									$product->save();
-									$product_id = $product->get_id();
-									update_post_meta($product_id, '_sku', $prod_sku);
-								}
-							}
+					if ($has_match && !empty($check) && $duplicate_action === 'update') {
+						$product_id = $get_result[0]->ID;
+						$product = wc_get_product($product_id);
+						if ($product) {
+							$this->apply_post_values_to_wc_product($product, $post_values);
 							$product_id = $product->save();
-							$core_instance->detailed_log[$line_number]['Type_of_Product'] = $product_type;
-							wp_set_object_terms($product_id, $product_type, 'product_type');
+							$core_instance->detailed_log[$line_number]['Message'] = 'Updated Product ID: ' . $product_id;
+							$core_instance->detailed_log[$line_number]['state'] = 'Updated';
+							$mode_of_affect = 'Updated';
+							$this->update_import_log_count( $log_table_name, 'updated', $updated_count, $unikey_name, $unikey_value );
 						}
-						if($unmatched_row == 'true'){
-							global $wpdb;
-							$post_entries_table = $wpdb->prefix ."post_entries_table";
-							$file_table_name = $wpdb->prefix."smackcsv_file_events";
-							$get_id  = $wpdb->get_results( "SELECT file_name  FROM $file_table_name WHERE `$unikey_name` = '$unikey_value'");	
-							$file_name = $get_id[0]->file_name;
-							$wpdb->get_results("INSERT INTO $post_entries_table (`ID`,`type`, `file_name`,`status`) VALUES ( '{$product_id}','{$type}', '{$file_name}','Inserted')");
+					} elseif (!$has_match || empty($check) || $duplicate_action === 'create') {
+						$created = $this->create_wc_product_from_post_values($post_values, $line_number, $core_instance, $unikey_value, $unikey_name, $unmatched_row, $type, $log_table_name, $created_count);
+						if ($created === false) {
+							return array('MODE' => $mode);
 						}
-		
-						$core_instance->detailed_log[$line_number]['Message'] = 'Inserted Product ID: ' . $product_id . ', ' . $assigned_author;
-						$core_instance->detailed_log[$line_number]['state'] = 'Inserted';
-						$wpdb->get_results("UPDATE $log_table_name SET created = $created_count WHERE $unikey_name = '$unikey_value'");
+						$product = $created['product'];
+						$product_id = $created['product_id'];
+						$mode_of_affect = 'Inserted';
 					}
-					
 				}
-			if(!empty($product)){
+				if ($mode == 'Update') {
+					if ($has_match) {
+						$product_id = $get_result[0]->ID;
+						$product = wc_get_product($product_id);
+						if ($product) {
+							$this->apply_post_values_to_wc_product($product, $post_values);
+							$product_id = $product->save();
+							$core_instance->detailed_log[$line_number]['Message'] = 'Updated Product ID: ' . $product_id;
+							$core_instance->detailed_log[$line_number]['state'] = 'Updated';
+							$mode_of_affect = 'Updated';
+							$this->update_import_log_count( $log_table_name, 'updated', $updated_count, $unikey_name, $unikey_value );
+						}
+					} elseif ($update_based_on === 'skip') {
+						$core_instance->detailed_log[$line_number]['Message'] = 'Skipped. No matching record found.';
+						$core_instance->detailed_log[$line_number]['state'] = 'Skipped';
+						$this->update_import_log_count( $log_table_name, 'skipped', $skipped_count, $unikey_name, $unikey_value );
+						return array('MODE' => $mode);
+					} else {
+						$created = $this->create_wc_product_from_post_values($post_values, $line_number, $core_instance, $unikey_value, $unikey_name, $unmatched_row, $type, $log_table_name, $created_count);
+						if ($created === false) {
+							return array('MODE' => $mode);
+						}
+						$product = $created['product'];
+						$product_id = $created['product_id'];
+						$mode_of_affect = 'Inserted';
+					}
+				}
+			if(!empty($product) && !empty($product_id)){
 				$woocommerce_meta_instance->woocommerce_meta_import_function($product_meta_data, '', $product_id, '', 'WooCommerce Product', $line_number, $header_array, $value_array, $mode, $hash_key,$attr_data);
 			}
 		}
 	}catch (\Exception $e) {
 		$core_instance->detailed_log[$line_number]['Message'] = $e->getMessage();
 		$core_instance->detailed_log[$line_number]['state'] = 'Skipped';
-		$wpdb->get_results("UPDATE $log_table_name SET skipped = $skipped_count WHERE $unikey_name = '$unikey_value'");
+		$this->update_import_log_count( $log_table_name, 'skipped', $skipped_count, $unikey_name, $unikey_value );
 		return array('MODE' => $mode,'ID' => '');
 	}
 			$returnArr['ID'] = $product_id;
@@ -710,6 +1013,131 @@ if (isset($post_values['post_content']) && !empty($post_values['post_content']) 
 			}
 			return $returnArr;
 	}
+
+	/**
+	 * Apply mapped core values to an existing WooCommerce product object.
+	 *
+	 * @param \WC_Product $product
+	 * @param array       $post_values
+	 * @return \WC_Product
+	 */
+	private function apply_post_values_to_wc_product($product, $post_values)
+	{
+		if (!empty($post_values['post_title'])) {
+			$product->set_name($post_values['post_title']);
+		}
+		if (!empty($post_values['post_name'])) {
+			$product->set_slug(sanitize_title($post_values['post_name']));
+		}
+		if (!empty($post_values['post_excerpt']) && method_exists($product, 'set_short_description')) {
+			$product->set_short_description($post_values['post_excerpt']);
+		}
+		if (isset($post_values['post_content']) && $post_values['post_content'] !== null && $post_values['post_content'] !== '') {
+			$content = html_entity_decode($post_values['post_content']);
+			$content = str_replace('\n', "\n", $content);
+			$product->set_description($content);
+		}
+		$prod_sku = $post_values['PRODUCTSKU'] ?? null;
+		if (!empty($prod_sku) && method_exists($product, 'set_sku')) {
+			$existing_id = wc_get_product_id_by_sku(wc_clean($prod_sku));
+			if ($existing_id == 0 || (int) $existing_id === (int) $product->get_id()) {
+				$product->set_sku(wc_clean($prod_sku));
+			}
+		}
+		if (!empty($post_values['post_status'])) {
+			$product->set_status($post_values['post_status']);
+		}
+		return $product;
+	}
+
+	/**
+	 * Create a new WooCommerce product from mapped post values.
+	 *
+	 * @return array|false Product payload or false on failure.
+	 */
+	private function create_wc_product_from_post_values($post_values, $line_number, $core_instance, $unikey_value, $unikey_name, $unmatched_row, $type, $log_table_name, $created_count)
+	{
+		global $wpdb;
+		$post_values['produc_type'] = isset($post_values['product_type']) ? $post_values['product_type'] : 'simple';
+		$pt = (int) ($post_values['product_type'] ?? 1);
+		$product_type = $pt;
+		if ($pt === 1) {
+			$product_type = 'simple';
+		} elseif ($pt === 2) {
+			$product_type = 'grouped';
+		} elseif ($pt === 3) {
+			$product_type = 'external';
+		} elseif ($pt === 4) {
+			$product_type = 'variable';
+		} elseif ($pt === 5) {
+			$product_type = 'subscription';
+		} elseif ($pt === 6) {
+			$product_type = 'variable-subscription';
+		} elseif ($pt === 7) {
+			$product_type = 'bundle';
+		} elseif ($pt === 8) {
+			$product_type = 'variation';
+		} elseif ($pt === 9) {
+			$product_type = 'jet_booking';
+		}
+
+		if ($product_type == 'external') {
+			$product = new \WC_Product_External();
+		} elseif ($product_type == 'variable') {
+			$product = new \WC_Product_Variable();
+		} elseif ($product_type == 'grouped') {
+			$product = new \WC_Product_Grouped();
+		} elseif ($product_type == 'variation') {
+			$product = new \WC_Product_Variation();
+		} elseif ($product_type == 'jet_booking' && class_exists('\WC_Product_Jet_Booking')) {
+			$product = new \WC_Product_Jet_Booking();
+		} else {
+			$product = new \WC_Product_Simple();
+		}
+
+		$product = $this->apply_post_values_to_wc_product($product, $post_values);
+		$prod_sku = $post_values['PRODUCTSKU'] ?? null;
+		if (!empty($prod_sku)) {
+			$sku_check = wc_get_product_id_by_sku(wc_clean($prod_sku));
+			if ($sku_check == 0) {
+				$product->set_sku(wc_clean($prod_sku));
+			}
+		}
+		$product_id = $product->save();
+		$core_instance->detailed_log[$line_number]['Type_of_Product'] = $product_type;
+		wp_set_object_terms($product_id, $product_type, 'product_type');
+
+		if ($unmatched_row == 'true') {
+			$post_entries_table = $wpdb->prefix . 'post_entries_table';
+			$file_table_name = $wpdb->prefix . 'smackcsv_file_events';
+			$allowed_keys = array( 'hash_key', 'templatekey' );
+			if ( ! in_array( $unikey_name, $allowed_keys, true ) ) {
+				$unikey_name = 'hash_key';
+			}
+			$get_id = $wpdb->get_results($wpdb->prepare("SELECT file_name FROM $file_table_name WHERE `$unikey_name` = %s", $unikey_value));
+			$file_name = $get_id[0]->file_name;
+			$wpdb->insert(
+				$post_entries_table,
+				array(
+					'ID' => absint($product_id),
+					'type' => $type,
+					'file_name' => $file_name,
+					'status' => 'Inserted',
+				),
+				array( '%d', '%s', '%s', '%s' )
+			);
+		}
+
+		$core_instance->detailed_log[$line_number]['Message'] = 'Inserted Product ID: ' . $product_id;
+		$core_instance->detailed_log[$line_number]['state'] = 'Inserted';
+		$this->update_import_log_count( $log_table_name, 'created', $created_count, $unikey_name, $unikey_value );
+
+		return array(
+			'product' => $product,
+			'product_id' => $product_id,
+		);
+	}
+
 	public function woocommerce_variations_import($data_array, $mode, $check, $unikey, $unikey_name, $line_number, $variation_count)
 	{
 		global $wpdb, $core_instance;
@@ -733,7 +1161,7 @@ if (isset($post_values['post_content']) && !empty($post_values['post_content']) 
 				$variation_condition = 'insert_using_product_id';
 			}
 		} elseif ($parent_sku != '') {
-			$get_parent_product_id = $wpdb->get_results("select id from {$wpdb->prefix}posts where post_status != 'trash' and post_type = 'product' and id in (select post_id from {$wpdb->prefix}postmeta where meta_value = '$parent_sku')");
+			$get_parent_product_id = $wpdb->get_results($wpdb->prepare("select id from {$wpdb->prefix}posts where post_status != 'trash' and post_type = 'product' and id in (select post_id from {$wpdb->prefix}postmeta where meta_value = %s)", $parent_sku));
 			$count = count($get_parent_product_id);
 			$key = 0;
 			if (! empty($get_parent_product_id)) {
@@ -743,13 +1171,13 @@ if (isset($post_values['post_content']) && !empty($post_values['post_content']) 
 				if ((!empty($term_details)) && ($term_details[0]->name != 'variable')) {
 
 					$core_instance->detailed_log[$line_number]['Message'] = "Skipped,Product is not variable in type.";
-					$wpdb->get_results("UPDATE $logTableName SET skipped = $skipped_count WHERE $unikey_name = '$unikey'");
+					$this->update_import_log_count( $logTableName, 'skipped', $skipped_count, $unikey_name, $unikey );
 					return array('MODE' => $mode, 'ID' => '');
 				}
 			} else {
 				$product_id = '';
 				$core_instance->detailed_log[$line_number]['Message'] = "Skipped,Product is not available.";
-				$wpdb->get_results("UPDATE $logTableName SET skipped = $skipped_count WHERE $unikey_name = '$unikey'");
+				$this->update_import_log_count( $logTableName, 'skipped', $skipped_count, $unikey_name, $unikey );
 				return array('MODE' => $mode, 'ID' => '');
 			}
 			if ($mode == 'Insert') {
@@ -805,7 +1233,7 @@ if (isset($post_values['post_content']) && !empty($post_values['post_content']) 
 					}
 					break;
 				case 'update_using_variation_sku':
-					$variation_data = $wpdb->get_results("select post_id from {$wpdb->prefix}postmeta where meta_value = '$variation_sku' and post_id in (select id from {$wpdb->prefix}posts where post_type = 'product_variation' and post_status != 'trash' and post_parent = $product_id)");
+					$variation_data = $wpdb->get_results($wpdb->prepare("select post_id from {$wpdb->prefix}postmeta where meta_value = %s and post_id in (select id from {$wpdb->prefix}posts where post_type = 'product_variation' and post_status != 'trash' and post_parent = %d)", $variation_sku, absint($product_id)));
 					$variation_id = !empty($variation_data) ? $variation_data[0]->post_id : "";
 					if ($variation_id)
 						$get_variation_data = $wpdb->get_results($wpdb->prepare("select * from {$wpdb->prefix}posts where ID = %d and post_type = %s", $variation_id, 'product_variation'));
@@ -876,16 +1304,16 @@ if (isset($post_values['post_content']) && !empty($post_values['post_content']) 
 			if (empty($variation_count)) {
 				$core_instance->detailed_log[$line_number]['Message'] = 'Inserted Variation ID: ' . $variationid;
 			} else {
-				$parent_id = $wpdb->get_var("SELECT post_parent FROM {$wpdb->prefix}posts WHERE id = '$variationid' ");
+				$parent_id = $wpdb->get_var($wpdb->prepare("SELECT post_parent FROM {$wpdb->prefix}posts WHERE id = %d ", absint($variationid)));
 				$core_instance->detailed_log[$line_number]['Message'] = 'Inserted Product ID: ' . $parent_id . '   Inserted Variation ID: ' . $variationid;
 			}
-			$wpdb->get_results("UPDATE $logTableName SET created = $created_count WHERE $unikey_name = '$unikey'");
+			$this->update_import_log_count( $logTableName, 'created', $created_count, $unikey_name, $unikey );
 			$returnArr = array('ID' => $variationid, 'MODE' => 'Inserted');
 			return $returnArr;
 		} elseif ($type == 'update_using_variation_id' || $type == 'update_using_variation_sku' || $type == 'update_using_variation_id_and_sku') {
 
 			$core_instance->detailed_log[$line_number]['Message'] = 'Updated Variation ID: ' . $variation_id;
-			$wpdb->get_results("UPDATE $logTableName SET updated = $updated_count WHERE $unikey_name = '$unikey'");
+			$this->update_import_log_count( $logTableName, 'updated', $updated_count, $unikey_name, $unikey );
 
 			$returnArr = array('ID' => $variation_id, 'MODE' => 'Updated');
 			return $returnArr;

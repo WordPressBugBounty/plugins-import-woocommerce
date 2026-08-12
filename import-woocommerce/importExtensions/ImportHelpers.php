@@ -517,18 +517,29 @@ class ImportHelpers {
 	}
 
 	public function update_count($unikey_value,$unikey_name){
-		$response = [];
 		global $wpdb;
-		$logTableName = $wpdb->prefix ."import_detail_log";
-		$get_data =  $wpdb->get_results("SELECT skipped , created , updated FROM $logTableName WHERE $unikey_name = '$unikey_value' ");
-		$skipped = $get_data[0]->skipped;
-		$response['skipped'] = $skipped + 1;
-		$created = $get_data[0]->created;
-		$response['created'] = $created + 1;
-		$updated = $get_data[0]->updated;
-		$response['updated'] = $updated + 1;
+		$logTableName = $wpdb->prefix . 'import_detail_log';
+		$allowed_keys = array( 'hash_key', 'templatekey' );
+		if ( ! in_array( $unikey_name, $allowed_keys, true ) ) {
+			$unikey_name = 'hash_key';
+		}
+		$get_data = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT skipped, created, updated, failed FROM {$logTableName} WHERE {$unikey_name} = %s ORDER BY id DESC LIMIT 1",
+				$unikey_value
+			)
+		);
+		$skipped = isset( $get_data[0]->skipped ) ? (int) $get_data[0]->skipped : 0;
+		$created = isset( $get_data[0]->created ) ? (int) $get_data[0]->created : 0;
+		$updated = isset( $get_data[0]->updated ) ? (int) $get_data[0]->updated : 0;
+		$failed  = isset( $get_data[0]->failed ) ? (int) $get_data[0]->failed : 0;
 
-		return $response;
+		return array(
+			'skipped' => $skipped + 1,
+			'created' => $created + 1,
+			'updated' => $updated + 1,
+			'failed'  => $failed + 1,
+		);
 	}
 
 }

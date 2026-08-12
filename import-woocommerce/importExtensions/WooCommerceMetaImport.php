@@ -55,7 +55,7 @@ class WooCommerceMetaImport extends ImportHelpers
 									$product_id = intval($product_id);
 								} else {
 									$product_id = ltrim($product_id);
-									$product_id = $wpdb->get_var("SELECT ID FROM {$wpdb->prefix}posts WHERE post_type = 'product' AND post_title = '$product_id' ORDER BY ID DESC");
+									$product_id = $wpdb->get_var($wpdb->prepare("SELECT ID FROM {$wpdb->prefix}posts WHERE post_type = 'product' AND post_title = %s ORDER BY ID DESC", $product_id));
 								}
 								if ($product_id) {
 									if (isset($existing_items_map[$product_id])) { // case : duplicate bundle ID check
@@ -1719,30 +1719,42 @@ class WooCommerceMetaImport extends ImportHelpers
 					$core_instance->detailed_log[$line_number]['Categories'] = $data_array[$ekey];
 					break;
 				case 'downloadable_files':
-					$downloadable_files = '';
-					if ($data_array[$ekey]) {
-						$exp_key = array();
-						$downloads = array();
+					$downloads = array();
+					if ( ! empty( $data_array[ $ekey ] ) ) {
 						$product->set_downloadable( true );
-						$exploded_file_data = explode('|', $data_array[$ekey]);
-						foreach($exploded_file_data as $file_datas){
-							$exploded_separate = explode(',', $file_datas);
-							$download = new \WC_Product_Download();
-							$attachment_id= WooCommerceMetaImport::$media_instance->media_handling($exploded_separate[1], $pID,$data_array,'','','',$header_array,$value_array);
-							$file_url = wp_get_attachment_url( $attachment_id ); 
-							$download->set_name( $exploded_separate[0]);
-							if(!empty($file_url) && isset($file_url)){
+						$exploded_file_data = explode( '|', $data_array[ $ekey ] );
+						foreach ( $exploded_file_data as $file_datas ) {
+							$exploded_separate = explode( ',', $file_datas, 2 );
+							if ( count( $exploded_separate ) < 2 ) {
+								continue;
+							}
+							$download      = new \WC_Product_Download();
+							$download_name = trim( $exploded_separate[0] );
+							$file_source   = trim( $exploded_separate[1] );
+
+							$download->set_name( $download_name );
+
+							// Remote URLs: WooCommerce can serve these directly — skip sideload.
+							if ( preg_match( '#^https?://#i', $file_source ) ) {
+								$download->set_id( md5( $file_source ) );
+								$download->set_file( $file_source );
+								$downloads[] = $download;
+								continue;
+							}
+
+							$attachment_id = WooCommerceMetaImport::$media_instance->media_handling( $file_source, $pID, $data_array, '', '', '', $header_array, $value_array );
+							$file_url      = $attachment_id ? wp_get_attachment_url( $attachment_id ) : '';
+							if ( ! empty( $file_url ) ) {
 								$download->set_id( md5( $file_url ) );
 								$download->set_file( $file_url );
-								$downloads[] = $download;
-							}else{
-								$download->set_id( md5( $exploded_separate[1], ) );
-								$download->set_file($exploded_separate[1], );
-								$downloads[] = $download;
+							} else {
+								$download->set_id( md5( $file_source ) );
+								$download->set_file( $file_source );
 							}
+							$downloads[] = $download;
 						}
 					}
-					if(!empty($downloads)){
+					if ( ! empty( $downloads ) ) {
 						$product->set_downloads( $downloads );
 					}
 					break;
@@ -1755,7 +1767,7 @@ class WooCommerceMetaImport extends ImportHelpers
 								if (is_numeric($grouping_product_id)) {
 									$my_grouping_product_id[] = (int) $grouping_product_id;
 								} else {
-									$my_grouping_product_id[] =  $wpdb->get_var("SELECT ID FROM {$wpdb->prefix}posts WHERE post_type = 'product' AND post_title = '$grouping_product_id' order by ID Desc ");
+									$my_grouping_product_id[] =  $wpdb->get_var($wpdb->prepare("SELECT ID FROM {$wpdb->prefix}posts WHERE post_type = 'product' AND post_title = %s order by ID Desc ", $grouping_product_id));
 								}
 							}
 							if (!empty($my_grouping_product_id)) {
@@ -1773,7 +1785,7 @@ class WooCommerceMetaImport extends ImportHelpers
 							if (is_numeric($crosssell_id)) {
 								$crosssellids[] = (int) $crosssell_id;
 							} else {
-								$product_id =  $wpdb->get_var("SELECT ID FROM {$wpdb->prefix}posts WHERE post_type = 'product' AND post_title = '$crosssell_id' order by ID Desc ");
+								$product_id =  $wpdb->get_var($wpdb->prepare("SELECT ID FROM {$wpdb->prefix}posts WHERE post_type = 'product' AND post_title = %s order by ID Desc ", $crosssell_id));
 								if ($product_id) {
 									$crosssellids[] = $product_id;
 								}
@@ -1794,7 +1806,7 @@ class WooCommerceMetaImport extends ImportHelpers
 								$upsellids[] = (int) $upsell_id;
 							} else {
 								// Fetch product ID based on product title
-								$product_id = $wpdb->get_var("SELECT ID FROM {$wpdb->prefix}posts WHERE post_type = 'product' AND post_title = '$upsell_id' order by ID Desc ");
+								$product_id = $wpdb->get_var($wpdb->prepare("SELECT ID FROM {$wpdb->prefix}posts WHERE post_type = 'product' AND post_title = %s order by ID Desc ", $upsell_id));
 								if ($product_id) {
 									$upsellids[] = $product_id;
 								}
@@ -1812,7 +1824,8 @@ class WooCommerceMetaImport extends ImportHelpers
 						} else {
 							$f_path = WooCommerceMetaImport::$media_instance->get_filename_path($data_array[$ekey], '');
 							$fimg_name = isset($f_path['fimg_name']) ? $f_path['fimg_name'] : '';
-							$attachment_id = $wpdb->get_results("SELECT ID FROM {$wpdb->prefix}posts WHERE post_type = 'attachment' AND guid LIKE '%$fimg_name%'", ARRAY_A);
+							$like = '%' . $wpdb->esc_like($fimg_name) . '%';
+							$attachment_id = $wpdb->get_results($wpdb->prepare("SELECT ID FROM {$wpdb->prefix}posts WHERE post_type = 'attachment' AND guid LIKE %s", $like), ARRAY_A);
 							!empty($attachment_id[0]['ID']) ? $product->set_image_id($attachment_id[0]['ID']) : '';
 						}
 					}
@@ -2006,20 +2019,21 @@ class WooCommerceMetaImport extends ImportHelpers
 					}
 					break;
 				default:
-					if (empty($variation_id)) {
-						$metaData[$ekey] = $data_array[$ekey];
+					if ( empty( $variation_id ) ) {
+						$metaData[ $ekey ] = $data_array[ $ekey ];
 					}
 					$metaData['_subscription_payment_sync_date'] = 'a:2:{s:3:"day";i:0;s:5:"month";i:0;}';
 					break;
 			}
+		}
+		if ( $product && method_exists( $product, 'save' ) ) {
 			$product->save();
-
 		}
 		//WooCommerce Product attribute Fields
 		if($product_type == 'variation' || $product_type == 'variable' || $product_type == 8){
 			$helpers_instance = ImportHelpers::getInstance();
 			$parentsku = $data_array['parent'];
-			$parent_product_id =$wpdb->get_var("SELECT ID from {$wpdb->prefix}posts as p inner join {$wpdb->prefix}postmeta as pm on p.ID=pm.post_id where pm.meta_key='_sku' and pm.meta_value='$parentsku' and post_status='publish'");
+			$parent_product_id =$wpdb->get_var($wpdb->prepare("SELECT ID from {$wpdb->prefix}posts as p inner join {$wpdb->prefix}postmeta as pm on p.ID=pm.post_id where pm.meta_key='_sku' and pm.meta_value=%s and post_status='publish'", $parentsku));
 			$product->set_parent_id($parent_product_id);
 			
 
