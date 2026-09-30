@@ -345,6 +345,10 @@ class MediaHandling{
 				//}
 			}
 			else{
+				// Never write a file the web server could execute.
+				if (preg_match('/^\.|\.(php[0-9]*|pht|phtml|phar|phps|cgi|pl|py|sh|shtml|asp|aspx|jsp)(\.|$)/i', basename($uploaddir_path))) {
+					return null;
+				}
 				if (file_exists($uploaddir_path)) {
 					$i = 1;
 					$exist = true;

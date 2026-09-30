@@ -11,7 +11,7 @@
  * @wordpress-plugin
  * Plugin Name: Import Woocommerce
  * Description: Import your WordPress Post, Page and Simple WooCommerce Product with Import Woocommerce. 
- * Version: 3.0
+ * Version: 3.1
  * Text Domain: import-woocommerce
  * Domain Path: /languages
  * Author: smackcoders
@@ -53,7 +53,7 @@ class WooComCSVHandler extends ImportHelpers {
 	private static $instance = null;
 	private static $install = null,$plugin_instance=null ;
 
-	public $version = '3.0';
+	public $version = '3.1';
 
 	public function __construct(){ 	
 		add_action('wp_ajax_DeactivateMailwoocommerce',array(__CLASS__,'deactivate_mail_woocommerce'));
@@ -150,14 +150,16 @@ class WooComCSVHandler extends ImportHelpers {
 			return false;
 		}else{
 			$upload_dir = $upload_dir . '/smack_uci_uploads/imports/';	
-			if (!is_dir($upload_dir)) {
-				wp_mkdir_p( $upload_dir);
+			if (method_exists('\Smackcoders\UCI\Core\SecurityHelper', 'ensure_secure_directory')) {
+				\Smackcoders\UCI\Core\SecurityHelper::ensure_secure_directory($upload_dir);
+			} else {
+				if (!is_dir($upload_dir)) {
+					wp_mkdir_p( $upload_dir);
+				}
+				@chmod($upload_dir, 0755);
 			}
-			chmod($upload_dir, 0777);		
 			return $upload_dir;
 		}
-		chmod($upload_dir, 0777);		
-		return $upload_dir;
 	}
 }
 add_action( 'plugins_loaded', 'Smackcoders\\SMWC\\onpluginsload' );

@@ -252,13 +252,30 @@ class ImportHelpers {
 			$upload = wp_upload_dir();
    			$upload_base_url = $upload['basedir'];
         	$customfn_file_path = $upload_base_url . '/smack_uci_uploads/customFunction.php';
+			if (method_exists('\Smackcoders\UCI\Core\SecurityHelper', 'ensure_secure_directory')) {
+				\Smackcoders\UCI\Core\SecurityHelper::ensure_secure_directory(dirname($customfn_file_path));
+			}
 
 			if(!file_exists($customfn_file_path)){
 				$add_php_tag = '<?php';
 				$openFile = fopen($customfn_file_path, "w+");
+				if (!$openFile) {
+					return;
+				}
 				fwrite($openFile, $add_php_tag);
 				fclose($openFile);
-				chmod($customfn_file_path , 0777);
+				@chmod($customfn_file_path , 0644);
+			}
+
+			if (fileperms($customfn_file_path) & 0022) {
+				@chmod($customfn_file_path, 0644);
+				clearstatcache(true, $customfn_file_path);
+			}
+			// Never write to or execute a file that another local user can modify.
+			$customfn_foreign_owner = function_exists('posix_geteuid') && fileowner($customfn_file_path) !== posix_geteuid();
+			if ((fileperms($customfn_file_path) & 0022) || $customfn_foreign_owner) {
+				error_log('WP Ultimate CSV Importer: refusing to use ' . $customfn_file_path . ' because it is writable by, or owned by, another user.');
+				return;
 			}
 
 			$get_custom_content = file_get_contents($customfn_file_path);
@@ -267,9 +284,11 @@ class ImportHelpers {
 			}
 			else{
 				$openFile = fopen($customfn_file_path, "a+");
+				if (!$openFile) {
+					return;
+				}
 				fwrite($openFile, "\n".$csv_value);
 				fclose($openFile);
-				chmod($customfn_file_path , 0777);
 			}
 			require_once $customfn_file_path;
 		//}

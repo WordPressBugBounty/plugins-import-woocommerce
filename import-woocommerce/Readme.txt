@@ -4,8 +4,8 @@ Donate link: https://www.paypal.me/smackcoders
 Tags: woocommerce csv import, woocommerce product import, import woocommerce products, woocommerce xml import, import woocommerce orders, import woocommerce customers, bulk import woocommerce, woocommerce order import, woocommerce customer import, product import, import products, woocommerce, csv importer, woocommerce csv importer, import woocommerce coupons, import woocommerce reviews, import woocommerce suite
 Requires at least: 5.0
 Tested up to: 7.0
-Stable tag: 3.0
-Version: 3.0
+Stable tag: 3.1
+Version: 3.1
 Requires PHP: 7.4
 Author: smackcoders
 Plugin URI: https://wordpress.org/plugins/import-woocommerce/
@@ -21,6 +21,8 @@ Managing a WooCommerce store means constantly moving data — products from supp
 Import **products, orders, coupons, customers, and reviews** from CSV, XML, or Excel files in just a few steps. The add-on handles product images (including gallery images and external URLs), product variations in a single CSV file, SEO data, EAN/GTIN fields, multilingual products, and a wide range of third-party plugin fields — all with an intuitive drag-and-drop interface and real-time import logs.
 
 **This add-on is part of the WP Ultimate CSV Importer ecosystem.** Install the free [WP Ultimate CSV Importer & Exporter](https://wordpress.org/plugins/wp-ultimate-csv-importer/) plugin first to use this add-on. If you also need to **export** WooCommerce products, orders, customers, or other data, install the [WP Ultimate Exporter](https://wordpress.org/plugins/wp-ultimate-exporter) add-on.
+
+[youtube https://www.youtube.com/watch?v=pK2lKrNEnkQ&feature=youtu.be]
 
 = Key Features =
 
@@ -205,6 +207,11 @@ The Import button is active only after a file has been successfully uploaded. If
 This plugin handles imports only. To export WooCommerce products, orders, customers, or other data, install the free [WP Ultimate Exporter](https://wordpress.org/plugins/wp-ultimate-exporter) add-on.
 
 == Changelog ==
+
+= 3.1 =
+* Fixed: The import directory is no longer created world-writable (0777); it now uses standard 0755 permissions.
+* Fixed: The custom function file is created with 0644 permissions and is refused if it is writable by other users or owned by another account.
+* Fixed: Product images with executable file extensions (e.g. .php, .phtml) are rejected.
 
 = 3.0 =
 * Added: WooCommerce imports now support Pre-Flight Validation and Auto Recovery from the core plugin.
@@ -420,7 +427,9 @@ Resolved: An issue with WooCommerce Stock Status.
 
 == Upgrade Notice ==
 
+= 3.1 =
+Security update: import directories are no longer world-writable. Update alongside WP Ultimate CSV Importer 9.2. Recommended for all users.
+
 = 3.0 =
 Upgrade WP Ultimate CSV Importer Free and its add-on Import WooCommerce to enjoy new WooCommerce import capabilities and for a security hardening.
-
 
